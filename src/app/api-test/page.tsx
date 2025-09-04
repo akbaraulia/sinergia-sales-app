@@ -5,18 +5,18 @@ import { Button } from '@/components/ui/Button'
 
 const API_TEST_CREDENTIALS = {
   salon: {
-    email: 'styan_ren@yahoo.co.id',
-    password: 'sbisukses',
+    email: process.env.NEXT_PUBLIC_DEMO_SALON_EMAIL || 'salon@example.com',
+    password: process.env.NEXT_PUBLIC_DEMO_SALON_PASSWORD || 'demo_password',
     description: 'Salon Account (Customer role)'
   },
   sales: {
-    email: 'salestest@sinergia.co.id', 
-    password: 'sbisukses',
+    email: process.env.NEXT_PUBLIC_DEMO_SALES_EMAIL || 'sales@example.com', 
+    password: process.env.NEXT_PUBLIC_DEMO_SALES_PASSWORD || 'demo_password',
     description: 'Sales Account (Sales role)'
   },
   admin: {
-    email: 'akbar@sinergia.co.id',
-    password: 'akbar@sinergia',
+    email: process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL || 'admin@example.com',
+    password: process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD || 'demo_password',
     description: 'Admin Account (Static admin)'
   }
 }

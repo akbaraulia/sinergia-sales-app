@@ -16,25 +16,6 @@ export const ERP_CONFIG = {
   HEADERS: {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
-  },
-
-  // Demo credentials untuk testing
-  DEMO_ACCOUNTS: {
-    ADMIN: {
-      email: 'akbar@sinergia.co.id',
-      password: 'akbar@sinergia',
-      role: 'admin'
-    },
-    SALES: {
-      email: 'salestest@sinergia.co.id', 
-      password: 'sbisukses',
-      role: 'sales'
-    },
-    SALON: {
-      email: 'styan_ren@yahoo.co.id',
-      password: 'sbisukses', // Ganti sesuai password yang benar
-      role: 'salon'
-    }
   }
 } as const
 
@@ -45,10 +26,10 @@ export const ROLE_MAPPING = {
   'Administrator': 'admin' // Admin tidak ada role_profile_name, handled secara khusus
 } as const
 
-// Static admin emails yang otomatis jadi admin
+// Static admin emails yang otomatis jadi admin - USE ENVIRONMENT VARIABLES
 export const ADMIN_EMAILS = [
-  'akbar@sinergia.co.id',
-  'admin@sinergia.com' // Keep existing demo admin
+  // Add admin emails via environment variables
+  ...(process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim()) : [])
 ] as const
 
 // Permission mapping per role

@@ -67,12 +67,21 @@ export default function LoginPageERP() {
     })
   }
 
-  // Credential helpers untuk testing
+  // Credential helpers untuk testing - USE ENVIRONMENT VARIABLES
   const fillTestCredentials = (type: 'admin' | 'sales' | 'salon') => {
     const credentials = {
-      admin: { email: 'akbar@sinergia.co.id', password: 'akbar@sinergia' },
-      sales: { email: 'salestest@sinergia.co.id', password: 'sbisukses' },
-      salon: { email: 'styan_ren@yahoo.co.id', password: 'sbisukses' }
+      admin: { 
+        email: process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL || 'admin@example.com', 
+        password: process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD || 'demo_password' 
+      },
+      sales: { 
+        email: process.env.NEXT_PUBLIC_DEMO_SALES_EMAIL || 'sales@example.com', 
+        password: process.env.NEXT_PUBLIC_DEMO_SALES_PASSWORD || 'demo_password' 
+      },
+      salon: { 
+        email: process.env.NEXT_PUBLIC_DEMO_SALON_EMAIL || 'salon@example.com', 
+        password: process.env.NEXT_PUBLIC_DEMO_SALON_PASSWORD || 'demo_password' 
+      }
     }
     
     setFormData(credentials[type])

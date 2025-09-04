@@ -1,19 +1,19 @@
-// Test credentials untuk development
+// Test credentials untuk development - USE ENVIRONMENT VARIABLES
 export const TEST_CREDENTIALS = {
-  // Production ERP accounts
+  // Get from environment variables
   ADMIN: {
-    email: 'akbar@sinergia.co.id',
-    password: 'akbar@sinergia',
+    email: process.env.DEMO_ADMIN_EMAIL || 'admin@example.com',
+    password: process.env.DEMO_ADMIN_PASSWORD || 'demo_password',
     expected_role: 'admin'
   },
   SALES: {
-    email: 'salestest@sinergia.co.id',
-    password: 'sbisukses', 
+    email: process.env.DEMO_SALES_EMAIL || 'sales@example.com',
+    password: process.env.DEMO_SALES_PASSWORD || 'demo_password', 
     expected_role: 'sales'
   },
   SALON: {
-    email: 'styan_ren@yahoo.co.id',
-    password: 'sbisukses', // Update password sesuai yang benar
+    email: process.env.DEMO_SALON_EMAIL || 'salon@example.com',
+    password: process.env.DEMO_SALON_PASSWORD || 'demo_password',
     expected_role: 'salon'
   }
 } as const
