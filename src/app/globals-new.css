@@ -48,11 +48,6 @@
     @apply border border-asparagus text-asparagus hover:bg-asparagus hover:text-white;
   }
 
-  /* Dark mode button variants */
-  .dark .btn-outline {
-    @apply border-asparagus-400 text-asparagus-400 hover:bg-asparagus-400 hover:text-gray-900;
-  }
-
   .btn-ghost {
     @apply hover:bg-champagne hover:text-jet;
   }
