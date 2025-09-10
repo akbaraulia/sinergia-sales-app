@@ -31,7 +31,7 @@ export function formatPercent(value: number) {
 export function formatDate(date: Date | string, format: 'short' | 'long' | 'full' = 'short') {
   const dateObj = typeof date === 'string' ? new Date(date) : date
   
-  const options: Intl.DateTimeFormatOptions = {
+  const options: Record<'short' | 'long' | 'full', Intl.DateTimeFormatOptions> = {
     short: {
       year: 'numeric',
       month: 'short',

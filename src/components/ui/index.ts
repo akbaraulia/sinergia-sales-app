@@ -21,5 +21,9 @@ export {
   ButtonSpinner 
 } from './Loading'
 
+// New Components
+export { Pagination, PaginationInfo } from './Pagination'
+export { CustomerCard } from './CustomerCard'
+
 // Re-export types if needed
 export type { ButtonProps } from './Button'
