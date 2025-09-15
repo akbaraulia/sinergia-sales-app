@@ -19,6 +19,18 @@ export const ERP_CONFIG = {
   }
 } as const
 
+// Bridging API Configuration for mobile apps integration
+export const BRIDGING_CONFIG = {
+  BASE_URL: 'https://erpnext.showmemore.id',
+  ENDPOINTS: {
+    BEBAS_PILIH_QUEUE: '/api/bebas-pilih/queue' // Append /{document_name}
+  },
+  HEADERS: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
+} as const
+
 // Role mapping dari ERPNext role_profile_name ke sistem kita
 export const ROLE_MAPPING = {
   'Customer': 'salon',    // role_profile_name = "Customer" = salon

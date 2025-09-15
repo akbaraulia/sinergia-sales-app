@@ -94,6 +94,7 @@ export default function VoucherFormPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>('')
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('')
   const [selectedUser, setSelectedUser] = useState<string>('')
+  const [selectedVoucherType, setSelectedVoucherType] = useState<string>('') // BBP-TKO or BBP-SLN
   const [priceList] = useState<string>('HET PRICE') // Fixed value, disabled
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
@@ -101,6 +102,18 @@ export default function VoucherFormPage() {
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Search states for dropdowns
+  const [salesPersonSearch, setSalesPersonSearch] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [salesPersonDropdownOpen, setSalesPersonDropdownOpen] = useState(false)
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false)
+
+  // Voucher type options
+  const voucherTypeOptions = [
+    { value: 'BBP-TKO-.YYYY.-', label: 'Toko', description: 'Bebas Pilih untuk Toko' },
+    { value: 'BBP-SLN-.YYYY.-', label: 'Salon', description: 'Bebas Pilih untuk Salon' }
+  ]
 
   // Dropdown options
   const [branches, setBranches] = useState<BranchOption[]>([])
@@ -152,8 +165,12 @@ const canAddItem = (item: SellableItem): boolean => {
 
   // Fetch form data using new server script endpoint
   const fetchFormData = useCallback(async () => {
-    if (branches.length > 0 && salesPersons.length > 0) return // Don't refetch if already have data
+    if (branches.length > 0 && salesPersons.length > 0) {
+      console.log('🔄 [VOUCHER_FORM] Form data already loaded, skipping fetch')
+      return // Don't refetch if already have data
+    }
     
+    console.log('📋 [VOUCHER_FORM] Fetching form data (branches, sales persons, price lists)...')
     setLoadingBranches(true)
     setLoadingSales(true)
     
@@ -167,9 +184,11 @@ const canAddItem = (item: SellableItem): boolean => {
         }
       })
 
+      console.log('📡 [VOUCHER_FORM] Form data API response status:', response.status)
+
       if (response.ok) {
         const data = await response.json()
-        console.log('📦 [VOUCHER] Form data response:', data)
+        console.log('📦 [VOUCHER_FORM] Form data response:', JSON.stringify(data, null, 2))
         
         if (data.success && data.data) {
           // Set branches
@@ -179,31 +198,44 @@ const canAddItem = (item: SellableItem): boolean => {
               label: branch.branch || branch.name
             }))
             setBranches(branchOptions)
-            console.log('✅ [VOUCHER] Loaded branches from server script:', branchOptions.length)
+            console.log('✅ [VOUCHER_FORM] Loaded branches from server script:', branchOptions.length)
+            console.log('📍 [VOUCHER_FORM] Branch details:', branchOptions.map(b => ({ value: b.value, label: b.label })))
           }
           
           // Set sales persons
           if (data.data.sales_persons && Array.isArray(data.data.sales_persons)) {
             setSalesPersons(data.data.sales_persons)
-            console.log('✅ [VOUCHER] Loaded sales persons from server script:', data.data.sales_persons.length)
+            console.log('✅ [VOUCHER_FORM] Loaded sales persons from server script:', data.data.sales_persons.length)
+            console.log('👥 [VOUCHER_FORM] Sales person details:', data.data.sales_persons.map((sp: any) => ({ 
+              name: sp.name, 
+              sales_person_name: sp.sales_person_name,
+              employee_name: sp.employee_name 
+            })))
           }
           
           // Note: price_list is available in data.data.price_lists if needed later
+          if (data.data.price_lists) {
+            console.log('💰 [VOUCHER_FORM] Available price lists:', data.data.price_lists.length)
+          }
         }
       } else {
-        console.error('❌ [VOUCHER] Failed to fetch form data:', response.status, response.statusText)
+        console.error('❌ [VOUCHER_FORM] Failed to fetch form data:', response.status, response.statusText)
+        console.log('🔄 [VOUCHER_FORM] Falling back to stock levels for branches...')
         // Fallback to stock levels for branches if server script fails
         await fetchBranchesFromStock()
       }
     } catch (err) {
-      console.error('❌ [VOUCHER] Error fetching form data:', err)
+      console.error('❌ [VOUCHER_FORM] Error fetching form data:', err)
+      console.error('❌ [VOUCHER_FORM] Error stack:', err instanceof Error ? err.stack : 'No stack')
+      console.log('🔄 [VOUCHER_FORM] Falling back to stock levels for branches...')
       // Fallback to stock levels for branches if server script fails
       await fetchBranchesFromStock()
     } finally {
       setLoadingBranches(false)
       setLoadingSales(false)
+      console.log('🏁 [VOUCHER_FORM] Form data fetch completed')
     }
-  }, [branches.length, salesPersons.length])
+  }, []) // REMOVED dependencies to prevent re-renders
 
   // Fallback: Fetch branches from stock levels (if server script fails)
   const fetchBranchesFromStock = useCallback(async () => {
@@ -250,11 +282,14 @@ const canAddItem = (item: SellableItem): boolean => {
   // Fetch customers based on selected branch
   const fetchCustomers = useCallback(async (branchId: string) => {
     if (!branchId) {
+      console.log('🏢 [VOUCHER_CUSTOMERS] No branch selected, clearing customers')
       setErpUsers([])
       return
     }
     
+    console.log('👥 [VOUCHER_CUSTOMERS] Fetching customers for branch:', branchId)
     setLoadingUsers(true)
+    
     try {
       // Use API wrapper for server script to get customers for specific branch
       const response = await fetch(`/api/erp/form-data?get_data=customer&branch_id=${encodeURIComponent(branchId)}`, {
@@ -265,9 +300,11 @@ const canAddItem = (item: SellableItem): boolean => {
         }
       })
 
+      console.log('📡 [VOUCHER_CUSTOMERS] Customer API response status:', response.status)
+
       if (response.ok) {
         const data = await response.json()
-        console.log('📦 [VOUCHER] Customer data response:', data)
+        console.log('📦 [VOUCHER_CUSTOMERS] Customer data response:', JSON.stringify(data, null, 2))
         
         if (data.success && data.data && data.data.customers && Array.isArray(data.data.customers)) {
           // Convert customers to ERPUser format for compatibility
@@ -278,24 +315,40 @@ const canAddItem = (item: SellableItem): boolean => {
             user_type: 'Customer'
           }))
           setErpUsers(customers)
-          console.log('✅ [VOUCHER] Loaded customers for branch:', branchId, customers.length)
+          console.log('✅ [VOUCHER_CUSTOMERS] Loaded customers for branch:', branchId, customers.length)
+          console.log('👤 [VOUCHER_CUSTOMERS] Customer details:', customers.map(c => ({ 
+            name: c.name, 
+            full_name: c.full_name 
+          })))
         } else if (data.success && data.data && data.data.customers && data.data.customers.error) {
-          console.warn('⚠️ [VOUCHER] Customer fetch error:', data.data.customers.error)
+          console.warn('⚠️ [VOUCHER_CUSTOMERS] Customer fetch error:', data.data.customers.error)
+          setErpUsers([])
+        } else {
+          console.warn('⚠️ [VOUCHER_CUSTOMERS] Unexpected customer data structure:', data)
           setErpUsers([])
         }
+      } else {
+        console.error('❌ [VOUCHER_CUSTOMERS] Customer API request failed:', response.status, response.statusText)
+        setErpUsers([])
       }
     } catch (err) {
-      console.error('❌ [VOUCHER] Failed to fetch customers:', err)
+      console.error('❌ [VOUCHER_CUSTOMERS] Failed to fetch customers:', err)
+      console.error('❌ [VOUCHER_CUSTOMERS] Error stack:', err instanceof Error ? err.stack : 'No stack')
       setErpUsers([])
     } finally {
       setLoadingUsers(false)
+      console.log('🏁 [VOUCHER_CUSTOMERS] Customer fetch completed for branch:', branchId)
     }
   }, [])
 
   // Fetch promo details
   const fetchPromoDetails = useCallback(async () => {
-    if (!promoCode) return
+    if (!promoCode) {
+      console.warn('⚠️ [VOUCHER_PROMO] No promo code provided')
+      return
+    }
     
+    console.log('🎯 [VOUCHER_PROMO] Fetching promo details for:', promoCode)
     setLoading(true)
     setError(null)
 
@@ -308,27 +361,40 @@ const canAddItem = (item: SellableItem): boolean => {
         }
       })
 
+      console.log('📡 [VOUCHER_PROMO] API Response status:', response.status)
+
       if (!response.ok) {
         throw new Error(`Failed to fetch promo: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
+      console.log('📦 [VOUCHER_PROMO] API Response data:', JSON.stringify(data, null, 2))
       
       if (data.success && data.promo) {
         setPromo(data.promo)
-        console.log('🎯 [VOUCHER] Loaded promo:', data.promo)
+        console.log('✅ [VOUCHER_PROMO] Promo loaded successfully:', {
+          kode: data.promo.kode,
+          nama: data.promo.nama,
+          nilai: data.promo.nilai,
+          brand: data.promo.brand,
+          expired: data.promo.expired,
+          freeItemsCount: data.promo.free_items?.length || 0
+        })
       } else {
+        console.error('❌ [VOUCHER_PROMO] Promo not found in response')
         setError('Promo not found')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch promo'
-      console.error('❌ [VOUCHER] Promo fetch error:', errorMessage)
+      console.error('❌ [VOUCHER_PROMO] Fetch error:', errorMessage)
+      console.error('❌ [VOUCHER_PROMO] Error stack:', err instanceof Error ? err.stack : 'No stack')
       setError(errorMessage)
       showToast.error('Failed to load promo', errorMessage)
     } finally {
       setLoading(false)
+      console.log('🏁 [VOUCHER_PROMO] Promo fetch completed')
     }
-  }, [promoCode, showToast])
+  }, [promoCode]) // REMOVED showToast dependency
 
   // Fetch available items (filtered by brand if specified) - OPTIMIZED: Only fetch ONCE
   const fetchAvailableItems = useCallback(async () => {
@@ -370,7 +436,7 @@ const canAddItem = (item: SellableItem): boolean => {
     } finally {
       setLoadingItems(false)
     }
-  }, [promo, allItems.length]) // REMOVED showToast dependency
+  }, [promo?.kode]) // FIXED: Only depend on promo code, not entire promo object
 
   // Initialize data
   useEffect(() => {
@@ -386,15 +452,89 @@ const canAddItem = (item: SellableItem): boolean => {
 
   // Fetch customers when branch is selected
   useEffect(() => {
+    console.log('🔄 [VOUCHER_EFFECT] Branch selection changed:', selectedBranch)
+    
     if (selectedBranch) {
+      console.log('🏢 [VOUCHER_EFFECT] Fetching customers for new branch:', selectedBranch)
       fetchCustomers(selectedBranch)
+      
       // Clear previously selected user when branch changes
-      setSelectedUser('')
+      if (selectedUser) {
+        console.log('👤 [VOUCHER_EFFECT] Clearing previously selected user:', selectedUser)
+        setSelectedUser('')
+      }
     } else {
+      console.log('🏢 [VOUCHER_EFFECT] No branch selected, clearing customers and user')
       setErpUsers([])
       setSelectedUser('')
     }
   }, [selectedBranch, fetchCustomers])
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('🛒 [VOUCHER_STATE] Cart updated:', {
+      itemCount: cart.length,
+      totalValue: cartTotal,
+      items: cart.map(item => ({
+        code: item.item.item_code,
+        name: item.item.item_name,
+        qty: item.quantity,
+        subtotal: item.subtotal
+      }))
+    })
+  }, [cart, cartTotal])
+
+  useEffect(() => {
+    console.log('🎯 [VOUCHER_STATE] Promo state updated:', promo ? {
+      kode: promo.kode,
+      nama: promo.nama,
+      nilai: promo.nilai,
+      brand: promo.brand,
+      expired: promo.expired,
+      freeItemsCount: promo.free_items?.length || 0
+    } : 'No promo loaded')
+  }, [promo])
+
+  useEffect(() => {
+    console.log('📝 [VOUCHER_STATE] Form selections updated:', {
+      voucherType: selectedVoucherType,
+      branch: selectedBranch,
+      salesPerson: selectedSalesPerson,
+      customer: selectedUser,
+      priceList: priceList
+    })
+  }, [selectedVoucherType, selectedBranch, selectedSalesPerson, selectedUser, priceList])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      
+      // Close sales person dropdown if clicking outside
+      if (salesPersonDropdownOpen && !target.closest('[data-dropdown="sales-person"]')) {
+        setSalesPersonDropdownOpen(false)
+        console.log('👥 [VOUCHER_UI] Sales person dropdown closed')
+      }
+      
+      // Close customer dropdown if clicking outside
+      if (customerDropdownOpen && !target.closest('[data-dropdown="customer"]')) {
+        setCustomerDropdownOpen(false)
+        console.log('👤 [VOUCHER_UI] Customer dropdown closed')
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [salesPersonDropdownOpen, customerDropdownOpen])
+
+  // Clear customer search when branch changes
+  useEffect(() => {
+    if (selectedBranch) {
+      setCustomerSearch('')
+      setCustomerDropdownOpen(false)
+      console.log('🏢 [VOUCHER_UI] Branch changed, clearing customer search')
+    }
+  }, [selectedBranch])
 
   // OPTIMIZED FILTERING - Using useMemo like catalog
   const filteredItems = useMemo(() => {
@@ -427,6 +567,29 @@ const canAddItem = (item: SellableItem): boolean => {
 
     return filtered
   }, [allItems, promo?.brand, searchQuery])
+
+  // FILTERED DROPDOWN DATA - Search functionality for large datasets
+  const filteredSalesPersons = useMemo(() => {
+    if (!salesPersonSearch.trim()) return salesPersons
+    
+    const query = salesPersonSearch.toLowerCase()
+    return salesPersons.filter(person =>
+      person.sales_person_name?.toLowerCase().includes(query) ||
+      person.employee_name?.toLowerCase().includes(query) ||
+      person.name?.toLowerCase().includes(query)
+    )
+  }, [salesPersons, salesPersonSearch])
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return erpUsers
+    
+    const query = customerSearch.toLowerCase()
+    return erpUsers.filter(customer =>
+      customer.full_name?.toLowerCase().includes(query) ||
+      customer.name?.toLowerCase().includes(query) ||
+      customer.email?.toLowerCase().includes(query)
+    )
+  }, [erpUsers, customerSearch])
 
   // PAGINATION - Like catalog
   const totalItems = filteredItems.length
@@ -558,13 +721,13 @@ const canAddItem = (item: SellableItem): boolean => {
     
     // Show success toast AFTER state update
     showToast.success('Item added', `${item.item_name} added to selection`)
-  }, [cart, promo, selectedBranch, showToast]) // Add cart to dependencies for current total
+  }, [cart, promo?.nilai, selectedBranch]) // REMOVED showToast from dependencies
 
   // Remove item from cart - OPTIMIZED
   const removeFromCart = useCallback((itemCode: string) => {
     setCart(prevCart => prevCart.filter(cartItem => cartItem.item.item_code !== itemCode))
     showToast.success('Item removed', 'Item removed from selection')
-  }, [showToast])
+  }, []) // REMOVED showToast dependency
 
   // Update item quantity in cart - OPTIMIZED
   const updateCartItemQuantity = useCallback((itemCode: string, newQuantity: number) => {
@@ -599,67 +762,157 @@ const canAddItem = (item: SellableItem): boolean => {
           : item
       )
     })
-  }, [removeFromCart, promo?.nilai, showToast, formatCurrency])
+  }, [removeFromCart, promo?.nilai]) // REMOVED showToast and formatCurrency dependencies
 
   // Submit voucher selection
   const handleSubmitSelection = async () => {
+    console.log('🎯 [VOUCHER_SUBMIT] Starting voucher submission process...')
+    
     if (cart.length === 0) {
+      console.warn('⚠️ [VOUCHER_SUBMIT] No items in cart')
       showToast.error('No items selected', 'Please select at least one item')
       return
     }
 
     if (isVoucherExceeded) {
+      console.warn('⚠️ [VOUCHER_SUBMIT] Voucher limit exceeded:', { cartTotal, voucherValue: promo?.nilai })
       showToast.error('Voucher limit exceeded', `Total cannot exceed ${formatCurrency(promo?.nilai || 0)}`)
       return
     }
 
     // Validate required fields
+    console.log('🔍 [VOUCHER_SUBMIT] Validating required fields...')
+    const validationErrors = []
+    
+    if (!selectedVoucherType) {
+      validationErrors.push('Voucher type is required')
+      console.error('❌ [VOUCHER_SUBMIT] Missing voucher type')
+    }
+    
     if (!selectedBranch) {
-      showToast.error('Branch required', 'Please select a branch')
-      return
+      validationErrors.push('Branch is required')
+      console.error('❌ [VOUCHER_SUBMIT] Missing branch')
     }
 
     if (!selectedSalesPerson) {
-      showToast.error('Sales person required', 'Please select a sales person')
-      return
+      validationErrors.push('Sales person is required') 
+      console.error('❌ [VOUCHER_SUBMIT] Missing sales person')
     }
 
     if (!selectedUser) {
-      showToast.error('Customer required', 'Please select a customer')
+      validationErrors.push('Customer is required')
+      console.error('❌ [VOUCHER_SUBMIT] Missing customer')
+    }
+
+    if (validationErrors.length > 0) {
+      console.error('❌ [VOUCHER_SUBMIT] Validation failed:', validationErrors)
+      showToast.error('Required fields missing', validationErrors.join(', '))
       return
     }
+
+    console.log('✅ [VOUCHER_SUBMIT] All validation passed')
 
     setIsSubmitting(true)
     
     try {
-      // Here you would submit the selection to your backend
+      // Prepare submission data
       const submissionData = {
         promoCode: promo?.kode,
         cartItems: cart,
         total: cartTotal,
         voucherValue: promo?.nilai,
+        voucherType: selectedVoucherType, // Include selected voucher type
         branch: selectedBranch,
         salesPerson: selectedSalesPerson,
         customerUser: selectedUser,
-        priceList: priceList
+        priceList: priceList,
+        promo: promo, // Include full promo data
+        freeItems: promo?.free_items || [] // Include free items
       }
       
-      console.log('🎯 [VOUCHER] Submitting selection:', submissionData)
+      console.log('📦 [VOUCHER_SUBMIT] Submission data prepared:', JSON.stringify(submissionData, null, 2))
+      console.log('🛒 [VOUCHER_SUBMIT] Cart summary:', {
+        itemCount: cart.length,
+        totalValue: cartTotal,
+        voucherValue: promo?.nilai,
+        voucherType: selectedVoucherType,
+        remainingValue: promo?.nilai ? promo.nilai - cartTotal : 0
+      })
+
+      // Submit to new Form Bebas Pilih API endpoint
+      console.log('📤 [VOUCHER_SUBMIT] Calling Form Bebas Pilih API...')
+      const response = await fetch('/api/erp/form-bebas-pilih', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submissionData)
+      })
+
+      console.log('📡 [VOUCHER_SUBMIT] API Response status:', response.status)
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ [VOUCHER_SUBMIT] API request failed:', response.status, response.statusText)
+        console.error('❌ [VOUCHER_SUBMIT] Error details:', errorData)
+        
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      console.log('📦 [VOUCHER_SUBMIT] API Response data:', JSON.stringify(data, null, 2))
       
-      showToast.success('Selection submitted', 'Your voucher selection has been processed')
-      
-      // Redirect or handle success
-      router.push('/dashboard')
+      if (data.success) {
+        console.log('✅ [VOUCHER_SUBMIT] Form Bebas Pilih created successfully!')
+        console.log('🆔 [VOUCHER_SUBMIT] Document name:', data.data?.name)
+        console.log('📊 [VOUCHER_SUBMIT] Document status:', data.data?.status)
+        console.log('💰 [VOUCHER_SUBMIT] Total value:', data.data?.total_harga)
+        console.log('📦 [VOUCHER_SUBMIT] Items count:', data.data?.items_count)
+        console.log('🎁 [VOUCHER_SUBMIT] Free items count:', data.data?.free_items_count)
+        
+        // Log bridging callback result
+        if (data.bridging) {
+          console.log('🌉 [VOUCHER_SUBMIT] Bridging callback result:', data.bridging)
+          if (data.bridging.success) {
+            console.log('✅ [VOUCHER_SUBMIT] Bridging to mobile apps successful')
+          } else {
+            console.warn('⚠️ [VOUCHER_SUBMIT] Bridging to mobile apps failed:', data.bridging.error)
+          }
+        }
+        
+        showToast.success(
+          'Voucher approved and processed successfully!', 
+          `Document ${data.data?.name} approved and queued for mobile apps${
+            data.bridging?.success ? ' ✅' : ' (bridging failed ⚠️)'
+          }`
+        )
+        
+        // Clear cart after successful submission
+        setCart([])
+        
+        // Redirect to success page or dashboard
+        router.push('/dashboard?voucher_success=true')
+        
+      } else {
+        console.error('❌ [VOUCHER_SUBMIT] Submission failed:', data.error)
+        console.error('❌ [VOUCHER_SUBMIT] Submitted data:', data.submittedData)
+        
+        showToast.error(
+          'Submission failed', 
+          data.error || 'Unknown error occurred'
+        )
+      }
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to submit selection'
-      console.error('❌ [VOUCHER] Submit error:', errorMessage)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to submit voucher selection'
+      console.error('❌ [VOUCHER_SUBMIT] Submit error:', errorMessage)
+      console.error('❌ [VOUCHER_SUBMIT] Error details:', err)
+      
       showToast.error('Failed to submit', errorMessage)
     } finally {
       setIsSubmitting(false)
+      console.log('🏁 [VOUCHER_SUBMIT] Submission process completed')
     }
   }
 
@@ -784,6 +1037,37 @@ const canAddItem = (item: SellableItem): boolean => {
                     Order Details
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Voucher Type Selection */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
+                        Voucher Type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={selectedVoucherType}
+                        onChange={(e) => {
+                          setSelectedVoucherType(e.target.value)
+                          console.log('🎟️ [VOUCHER_UI] Voucher type selected:', e.target.value)
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white"
+                        required
+                      >
+                        <option value="">Select Voucher Type</option>
+                        {voucherTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label} - {option.description}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedVoucherType && (
+                        <p className="text-xs text-green-600 mt-1">
+                          ✅ Selected: {voucherTypeOptions.find(opt => opt.value === selectedVoucherType)?.label} 
+                          <span className="text-gray-500 ml-1">
+                            ({selectedVoucherType})
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
                     {/* Branch Selection */}
                     <div>
                       <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
@@ -807,55 +1091,173 @@ const canAddItem = (item: SellableItem): boolean => {
                       )}
                     </div>
 
-                    {/* Sales Person Selection */}
-                    <div>
+                    {/* Sales Person Selection - SEARCHABLE */}
+                    <div data-dropdown="sales-person">
                       <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
                         Sales Person <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={selectedSalesPerson}
-                        onChange={(e) => setSelectedSalesPerson(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white"
-                        required
-                      >
-                        <option value="">Select Sales Person</option>
-                        {salesPersons.map((sales) => (
-                          <option key={sales.name} value={sales.name}>
-                            {sales.sales_person_name} {sales.employee_name && `(${sales.employee_name})`}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={salesPersonSearch}
+                          onChange={(e) => {
+                            setSalesPersonSearch(e.target.value)
+                            setSalesPersonDropdownOpen(true)
+                          }}
+                          onFocus={() => setSalesPersonDropdownOpen(true)}
+                          placeholder={selectedSalesPerson ? 
+                            salesPersons.find(sp => sp.name === selectedSalesPerson)?.sales_person_name || 'Search sales person...' 
+                            : 'Search sales person...'
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white"
+                          required
+                        />
+                        <svg 
+                          className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        
+                        {/* Dropdown */}
+                        {salesPersonDropdownOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-dark-surface border border-gray-300 dark:border-dark-border rounded-md shadow-lg max-h-60 overflow-auto">
+                            {loadingSales ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">Loading sales persons...</div>
+                            ) : filteredSalesPersons.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                {salesPersonSearch ? 'No sales persons found' : 'No sales persons available'}
+                              </div>
+                            ) : (
+                              <>
+                                {salesPersonSearch && (
+                                  <div className="px-3 py-1 text-xs text-gray-500 border-b border-gray-200 dark:border-gray-600">
+                                    {filteredSalesPersons.length} sales person(s) found
+                                  </div>
+                                )}
+                                {filteredSalesPersons.map((sales) => (
+                                  <div
+                                    key={sales.name}
+                                    onClick={() => {
+                                      setSelectedSalesPerson(sales.name)
+                                      setSalesPersonSearch('')
+                                      setSalesPersonDropdownOpen(false)
+                                      console.log('👥 [VOUCHER_UI] Sales person selected:', sales.name, sales.sales_person_name)
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                      selectedSalesPerson === sales.name ? 'bg-asparagus-50 dark:bg-asparagus-900' : ''
+                                    }`}
+                                  >
+                                    <div className="text-sm font-medium text-jet-800 dark:text-white">
+                                      {sales.sales_person_name}
+                                    </div>
+                                    {sales.employee_name && (
+                                      <div className="text-xs text-gray-500">
+                                        {sales.employee_name}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {loadingSales && (
                         <p className="text-xs text-gray-500 mt-1">Loading sales persons...</p>
                       )}
+                      {selectedSalesPerson && (
+                        <p className="text-xs text-green-600 mt-1">
+                          ✅ Selected: {salesPersons.find(sp => sp.name === selectedSalesPerson)?.sales_person_name}
+                        </p>
+                      )}
                     </div>
 
-                    {/* User Selection */}
-                    <div>
+                    {/* User Selection - SEARCHABLE */}
+                    <div data-dropdown="customer">
                       <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
                         Customer <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={selectedUser}
-                        onChange={(e) => setSelectedUser(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white"
-                        required
-                        disabled={!selectedBranch}
-                      >
-                        <option value="">
-                          {!selectedBranch ? 'Select Branch First' : 'Select Customer'}
-                        </option>
-                        {erpUsers.map((user) => (
-                          <option key={user.name} value={user.name}>
-                            {user.full_name} ({user.name})
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value)
+                            setCustomerDropdownOpen(true)
+                          }}
+                          onFocus={() => setCustomerDropdownOpen(true)}
+                          placeholder={selectedUser ? 
+                            erpUsers.find(u => u.name === selectedUser)?.full_name || 'Search customer...' 
+                            : !selectedBranch ? 'Select Branch First' : 'Search customer...'
+                          }
+                          disabled={!selectedBranch}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          required
+                        />
+                        <svg 
+                          className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        
+                        {/* Dropdown */}
+                        {customerDropdownOpen && selectedBranch && (
+                          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-dark-surface border border-gray-300 dark:border-dark-border rounded-md shadow-lg max-h-60 overflow-auto">
+                            {loadingUsers ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">Loading customers...</div>
+                            ) : filteredCustomers.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                {customerSearch ? 'No customers found' : 'No customers available for this branch'}
+                              </div>
+                            ) : (
+                              <>
+                                {customerSearch && (
+                                  <div className="px-3 py-1 text-xs text-gray-500 border-b border-gray-200 dark:border-gray-600">
+                                    {filteredCustomers.length} customer(s) found
+                                  </div>
+                                )}
+                                {filteredCustomers.map((user) => (
+                                  <div
+                                    key={user.name}
+                                    onClick={() => {
+                                      setSelectedUser(user.name)
+                                      setCustomerSearch('')
+                                      setCustomerDropdownOpen(false)
+                                      console.log('👤 [VOUCHER_UI] Customer selected:', user.name, user.full_name)
+                                    }}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                      selectedUser === user.name ? 'bg-asparagus-50 dark:bg-asparagus-900' : ''
+                                    }`}
+                                  >
+                                    <div className="text-sm font-medium text-jet-800 dark:text-white">
+                                      {user.full_name}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {user.name}
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {loadingUsers && (
                         <p className="text-xs text-gray-500 mt-1">Loading customers...</p>
                       )}
                       {selectedBranch && erpUsers.length === 0 && !loadingUsers && (
                         <p className="text-xs text-yellow-600 mt-1">No customers found for this branch</p>
+                      )}
+                      {selectedUser && (
+                        <p className="text-xs text-green-600 mt-1">
+                          ✅ Selected: {erpUsers.find(u => u.name === selectedUser)?.full_name}
+                        </p>
                       )}
                     </div>
 
@@ -874,10 +1276,10 @@ const canAddItem = (item: SellableItem): boolean => {
                   </div>
 
                   {/* Validation Messages */}
-                  {(!selectedBranch || !selectedSalesPerson || !selectedUser) && (
+                  {(!selectedVoucherType || !selectedBranch || !selectedSalesPerson || !selectedUser) && (
                     <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                       <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                        ⚠️ Please fill in all required fields (Branch, Sales Person, Customer) before adding items
+                        ⚠️ Please fill in all required fields (Voucher Type, Branch, Sales Person, Customer) before adding items
                       </p>
                     </div>
                   )}
@@ -890,10 +1292,11 @@ const canAddItem = (item: SellableItem): boolean => {
                     </div>
                   )}
 
-                  {selectedBranch && selectedUser && (
+                  {selectedVoucherType && selectedBranch && selectedUser && (
                     <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                       <p className="text-sm text-green-700 dark:text-green-300">
-                        �📍 Stock quantities shown for branch: <strong>{selectedBranch}</strong><br/>
+                        ✅ Voucher Type: <strong>{voucherTypeOptions.find(opt => opt.value === selectedVoucherType)?.label}</strong><br/>
+                        📍 Stock quantities shown for branch: <strong>{selectedBranch}</strong><br/>
                         👤 Customer: <strong>{erpUsers.find(u => u.name === selectedUser)?.full_name}</strong>
                       </p>
                     </div>
@@ -964,7 +1367,7 @@ const canAddItem = (item: SellableItem): boolean => {
     const maxQuantity = Math.floor(remainingVoucherValue / item.price)
     const hasStock = canAddItem(item)
     const branchStock = selectedBranch ? getStockForBranch(item, selectedBranch) : (item.stock_qty || 0)
-    const canAdd = remainingVoucherValue >= item.price && hasStock && selectedBranch && selectedSalesPerson && selectedUser && branchStock > 0
+    const canAdd = remainingVoucherValue >= item.price && hasStock && selectedVoucherType && selectedBranch && selectedSalesPerson && selectedUser && branchStock > 0
     
     return (
       <div key={item.item_code} className={`relative border border-gray-200 dark:border-dark-border rounded-lg p-4 hover:shadow-md transition-shadow ${!hasStock ? 'opacity-60' : ''}`}>
@@ -1050,7 +1453,7 @@ const canAddItem = (item: SellableItem): boolean => {
               'Out of Stock'
             ) : !hasStock ? (
               'Out of Stock'
-            ) : !selectedBranch || !selectedSalesPerson || !selectedUser ? (
+            ) : !selectedVoucherType || !selectedBranch || !selectedSalesPerson || !selectedUser ? (
               'Fill required fields'
             ) : remainingVoucherValue < item.price ? (
               'Exceeds voucher value'
