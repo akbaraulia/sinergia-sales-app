@@ -44,7 +44,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // Check if response has the expected structure and find the customer
     if (data && Array.isArray(data.data)) {
-      const customer = data.data.find((c: any) => c.name === decodedCustomerName || c.customer_name === decodedCustomerName)
+      const customer = data.data.find((c: { name: string; customer_name: string }) => 
+        c.name === decodedCustomerName || c.customer_name === decodedCustomerName
+      )
       
       if (customer) {
         console.log(`✅ [CUSTOMER DETAIL API] Successfully fetched customer: ${customer.customer_name}`)

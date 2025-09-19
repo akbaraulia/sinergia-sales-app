@@ -53,10 +53,11 @@ export default function LoginPageERP() {
       
       // AuthStore will handle redirection via useEffect above
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Login error:', error)
-      setError(error.message || 'Login failed. Please try again.')
-      showToast.error('Login failed', error.message || 'Please check your credentials')
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.'
+      setError(errorMessage)
+      showToast.error('Login failed', errorMessage)
     }
   }
 
@@ -208,7 +209,7 @@ export default function LoginPageERP() {
             {/* Footer */}
             <div className="mt-6 text-center">
               <p className="text-sm text-jet-600 dark:text-jet-400">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link 
                   href="/register" 
                   className="font-medium text-asparagus-600 hover:text-asparagus-500 dark:text-asparagus-400 dark:hover:text-asparagus-300"

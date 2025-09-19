@@ -72,3 +72,15 @@ export const ROLE_PERMISSIONS = {
 
 export type UserRole = keyof typeof ROLE_PERMISSIONS
 export type Permission = typeof ROLE_PERMISSIONS[UserRole][number]
+
+// Session Management Configuration
+export const SESSION_CONFIG = {
+  TIMEOUT_MINUTES: parseInt(process.env.SESSION_TIMEOUT_MINUTES || '60'),
+  AUTH_CHECK_INTERVAL_MINUTES: parseInt(process.env.AUTH_CHECK_INTERVAL_MINUTES || '5'),
+  COOKIE_MAX_AGE_MINUTES: parseInt(process.env.COOKIE_MAX_AGE_MINUTES || '120'),
+  
+  // Derived values in milliseconds
+  get TIMEOUT_MS() { return this.TIMEOUT_MINUTES * 60 * 1000 },
+  get AUTH_CHECK_INTERVAL_MS() { return this.AUTH_CHECK_INTERVAL_MINUTES * 60 * 1000 },
+  get COOKIE_MAX_AGE_MS() { return this.COOKIE_MAX_AGE_MINUTES * 60 * 1000 }
+} as const

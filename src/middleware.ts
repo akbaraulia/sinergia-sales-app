@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
 // DISABLED FOR NOW - localStorage auth cannot be checked in middleware
 // Will handle auth checks on client side in components
-export function middleware(request: NextRequest) {
+export function middleware() {
   // Just pass through everything for now
   return NextResponse.next()
 }

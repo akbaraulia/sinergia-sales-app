@@ -54,7 +54,8 @@ export default function RegisterPage() {
       } else {
         setError('Please fill in all fields')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Registration error:', error)
       setError('Registration failed. Please try again.')
     } finally {
       setIsLoading(false)

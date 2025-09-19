@@ -11,6 +11,21 @@ import { useToast } from '@/components/common/ToastProvider'
 export default function SalonDashboard() {
   const { showToast } = useToast()
 
+  type ChangeType = 'increase' | 'decrease' | 'neutral'
+  
+  const getChangeStyles = (changeType: ChangeType) => {
+    switch (changeType) {
+      case 'increase':
+        return { color: 'text-green-600', icon: '↗' }
+      case 'decrease':
+        return { color: 'text-red-600', icon: '↘' }
+      case 'neutral':
+        return { color: 'text-gray-600', icon: '→' }
+      default:
+        return { color: 'text-gray-600', icon: '→' }
+    }
+  }
+
   const salonStats = [
     {
       title: 'Total Point',
@@ -104,20 +119,20 @@ export default function SalonDashboard() {
     { 
       key: 'status' as const, 
       label: 'Status', 
-      render: (value: string) => {
-        const statusMap: { [key: string]: any } = {
+      render: (value: string | number) => {
+        const statusMap: { [key: string]: 'approved' | 'rejected' | 'pending' | 'draft' } = {
           'active': 'approved',
           'expired': 'rejected',
           'pending': 'pending'
         }
-        return <StatusBadge status={statusMap[value] || 'draft'} />
+        return <StatusBadge status={statusMap[value as string] || 'draft'} />
       }
     },
     { 
       key: 'remainingPoints' as const, 
       label: 'Points Left',
-      render: (value: number) => (
-        <Badge variant={value > 0 ? 'success' : 'error'}>
+      render: (value: string | number) => (
+        <Badge variant={(value as number) > 0 ? 'success' : 'error'}>
           {value} pts
         </Badge>
       )
@@ -207,11 +222,8 @@ export default function SalonDashboard() {
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
                   <div className="flex items-center mt-2">
-                    <span className={`text-sm font-medium ${
-                      stat.changeType === 'increase' ? 'text-green-600' : 
-                      stat.changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {stat.changeType === 'increase' ? '↗' : stat.changeType === 'decrease' ? '↘' : '→'} {stat.change}
+                    <span className={`text-sm font-medium ${getChangeStyles(stat.changeType).color}`}>
+                      {getChangeStyles(stat.changeType).icon} {stat.change}
                     </span>
                     <span className="text-gray-500 text-sm ml-2">vs last month</span>
                   </div>

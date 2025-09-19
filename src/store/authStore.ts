@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import SessionManager from '@/lib/utils/sessionManager'
 
 interface User {
   email: string
@@ -56,6 +57,9 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false 
           })
 
+          // Save session data with SessionManager
+          SessionManager.saveSessionData(result.user)
+
           console.log('✅ [AuthStore] Login successful:', result.user)
           return { success: true }
 
@@ -77,6 +81,9 @@ export const useAuthStore = create<AuthState>()(
           console.error('❌ Logout API error:', error)
         }
         
+        // Clear session data with SessionManager
+        SessionManager.clearSession()
+        
         // Clear local state
         set({ 
           user: null, 
@@ -87,6 +94,8 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => {
         set({ user, isAuthenticated: true })
+        // Update session data when user is set
+        SessionManager.saveSessionData(user)
       },
 
       checkAuth: () => {
