@@ -57,7 +57,7 @@ NEXT_PUBLIC_ERP_ENV=PROD
 NEXT_PUBLIC_API_URL=http://localhost:9080/api
 NEXT_PUBLIC_APP_URL=http://localhost:9080
 
-# ERP URLs
+# ERP URLs - Production mode
 ERP_BASE_URL=https://sinergia.digitalasiasolusindo.com
 ERP_DEV_BASE_URL=https://sinergiadev.digitalasiasolusindo.com
 
