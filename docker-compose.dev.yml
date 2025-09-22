@@ -1,0 +1,27 @@
+# Development docker-compose override
+version: '3.8'
+
+services:
+  sinergia-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    
+  # Disable nginx and redis for development
+  nginx:
+    profiles:
+      - production
+    
+  redis:
+    profiles:
+      - production
