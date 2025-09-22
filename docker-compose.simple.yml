@@ -39,7 +39,7 @@ services:
     image: redis:7-alpine
     container_name: sinergia-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Changed to avoid conflict
     volumes:
       - redis_data:/data
     restart: unless-stopped

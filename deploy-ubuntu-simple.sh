@@ -34,6 +34,19 @@ fi
 
 echo -e "${GREEN}✅ Docker and Docker Compose ready${NC}"
 
+# Check for port conflicts
+echo -e "${BLUE}ℹ️  Checking for port conflicts...${NC}"
+if netstat -tuln 2>/dev/null | grep -q ":9080 "; then
+    echo -e "${YELLOW}⚠️  Port 9080 is already in use. Stopping existing service...${NC}"
+    docker stop $(docker ps -q --filter "publish=9080") 2>/dev/null || true
+fi
+
+if netstat -tuln 2>/dev/null | grep -q ":6380 "; then
+    echo -e "${YELLOW}⚠️  Port 6380 is already in use. Using internal Redis connection only.${NC}"
+else
+    echo -e "${GREEN}✅ Ports 9080 and 6380 are available${NC}"
+fi
+
 # Create environment file for Ubuntu
 echo -e "${BLUE}ℹ️  Creating Ubuntu environment file...${NC}"
 cat > .env.ubuntu << EOF
@@ -53,7 +66,7 @@ SESSION_TIMEOUT_MINUTES=60
 AUTH_CHECK_INTERVAL_MINUTES=5
 COOKIE_MAX_AGE_MINUTES=120
 
-# Redis
+# Redis (using port 6380 to avoid conflicts)
 REDIS_URL=redis://redis:6379
 EOF
 
