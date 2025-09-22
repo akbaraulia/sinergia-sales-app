@@ -72,6 +72,12 @@ EOF
 
 echo -e "${GREEN}✅ Environment file created: .env.ubuntu${NC}"
 
+# Copy environment to .env.local so Docker can read it
+echo -e "${BLUE}ℹ️  Copying environment to .env.local for Docker...${NC}"
+cp .env.ubuntu .env.local
+
+echo -e "${GREEN}✅ Environment copied to .env.local${NC}"
+
 # Stop any existing containers
 echo -e "${BLUE}ℹ️  Stopping existing containers...${NC}"
 docker-compose -f docker-compose.simple.yml down 2>/dev/null || true
