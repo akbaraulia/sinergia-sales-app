@@ -1,6 +1,9 @@
 # Use the official Node.js runtime as base image
 FROM node:20-alpine AS base
 
+# Install SSH client and other dependencies
+RUN apk add --no-cache openssh-client curl
+
 # Set working directory
 WORKDIR /app
 
@@ -35,6 +38,9 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
+# Install SSH client and other dependencies for production
+RUN apk add --no-cache openssh-client curl
+
 # Set working directory
 WORKDIR /app
 
@@ -42,10 +48,16 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Create SSH directory
+RUN mkdir -p /home/nextjs/.ssh && chown nextjs:nodejs /home/nextjs/.ssh && chmod 700 /home/nextjs/.ssh
+
 # Copy built application from previous stage
 COPY --from=base --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=base --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=base --chown=nextjs:nodejs /app/public ./public
+
+# Copy SSH private key if it exists
+COPY --chown=nextjs:nodejs andrew.unknown* /home/nextjs/.ssh/ 2>/dev/null || true
 
 # Set user
 USER nextjs

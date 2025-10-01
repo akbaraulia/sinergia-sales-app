@@ -4,8 +4,9 @@
 
 ### Prerequisites
 - Docker Desktop installed and running
+- SSH private key (`andrew.unknown`) for database access
 - Port 9080 available for the application
-- Port 6379 available for Redis (optional)
+- Port 6380 available for Redis (optional)
 
 ### Development Deployment (Current Setup)
 
@@ -15,38 +16,69 @@
    cd sinergia-sales-web-next
    ```
 
-2. **Start Application**
+2. **Setup SSH Key for Database Access**
    ```bash
-   docker-compose up -d
+   # Copy your SSH private key to the project directory
+   cp /path/to/your/andrew.unknown ./andrew.unknown
+   chmod 600 andrew.unknown  # Linux/Mac only
    ```
 
-3. **Access Application**
+3. **Test SSH Connection (Optional)**
+   ```bash
+   # Linux/Mac
+   ./test-ssh-tunnel.sh
+   
+   # Windows
+   .\test-ssh-tunnel.ps1
+   ```
+
+4. **Deploy Application**
+   ```bash
+   # Simple deployment (Linux/Mac)
+   ./deploy-ubuntu-simple.sh
+   
+   # Windows with PowerShell
+   .\deploy-windows-docker.ps1
+   
+   # Manual deployment
+   docker-compose -f docker-compose.simple.yml up -d --build
+   ```
+
+5. **Access Application**
    - Main App: http://localhost:9080
    - Health Check: http://localhost:9080/api/health
-   - Redis: localhost:6379
+   - Redis: localhost:6380
 
-4. **Stop Application**
+6. **Stop Application**
    ```bash
-   docker-compose down
+   docker-compose -f docker-compose.simple.yml down
    ```
 
 ## 📋 Current Configuration
 
 ### Services Running
-- ✅ **Next.js App** (Port 9080) - Main application
-- ✅ **Redis** (Port 6379) - Session storage
+- ✅ **Next.js App** (Port 9080) - Main application with SSH tunnel support
+- ✅ **Redis** (Port 6380) - Session storage
+- ✅ **SSH Tunnel** - Database connectivity through secure tunnel
 - ❌ **Nginx** - Disabled (SSL certificate issues)
 
 ### Architecture
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Docker Host   │    │   Docker Host   │
-│                 │    │                 │
-│  Next.js App    │    │     Redis       │
-│  Port: 9080     │    │   Port: 6379    │
-│                 │    │                 │
-└─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Docker Host   │    │   Docker Host   │    │  Remote Servers │
+│                 │    │                 │    │                 │
+│  Next.js App    │    │     Redis       │    │   Database      │
+│  Port: 9080     │    │   Port: 6380    │    │   via SSH       │
+│  + SSH Tunnel   │    │                 │    │   Tunnel        │
+│                 │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### Database Access
+- **SSH Tunnel**: Secure connection to remote MySQL servers
+- **Live DB**: 192.168.10.129 → localhost:3306 (in container)
+- **Dev DB**: 192.168.10.159 → localhost:3306 (in container)
+- **Private Key**: `/home/nextjs/.ssh/andrew.unknown` (mounted from host)
 
 ## 🔧 Configuration Details
 
@@ -68,6 +100,30 @@ SESSION_TIMEOUT_MINUTES=60
 AUTH_CHECK_INTERVAL_MINUTES=5
 COOKIE_MAX_AGE_MINUTES=120
 REDIS_URL=redis://redis:6379
+
+# SSH Tunnel Configuration
+USE_SSH_TUNNEL=true
+SSH_LIVE_HOST=192.168.10.129
+SSH_LIVE_PORT=22
+SSH_LIVE_USER=root
+SSH_LIVE_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+SSH_DEV_HOST=192.168.10.159
+SSH_DEV_PORT=22
+SSH_DEV_USER=root
+SSH_DEV_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+
+# Database Configuration (via SSH tunnel)
+DB_LIVE_HOST=127.0.0.1
+DB_LIVE_PORT=3306
+DB_LIVE_USER=readonly_user
+DB_LIVE_PASSWORD=1a176bee987852f3e928
+DB_LIVE_DATABASE=_3564332c797595cf
+DB_DEV_HOST=127.0.0.1
+DB_DEV_PORT=3306
+DB_DEV_USER=readonly_user
+DB_DEV_PASSWORD=1a176bee987852f3e928
+DB_DEV_DATABASE=_3e6dae82f3bc05a6
+DB_REPORTING_ENV=LIVE
 ```
 
 ## 🛠 Advanced Configuration

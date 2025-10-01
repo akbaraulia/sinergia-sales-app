@@ -69,6 +69,8 @@ export async function GET(
             nilai: promo.nilai,
             expired: promo.expired,
             brand: promo.brand,
+            image: promo.image,
+            nonaktif: promo.nonaktif,
             free_items: promo.free_items || []
           }
         })

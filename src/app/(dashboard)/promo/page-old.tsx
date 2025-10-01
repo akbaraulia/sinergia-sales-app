@@ -10,6 +10,7 @@ import { useToast } from '@/components/common/ToastProvider'
 import { useAuthStore } from '@/store/authStore'
 import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { ERP_CONFIG } from '@/lib/constants/erp'
+import Image from 'next/image'
 
 interface FreeItem {
   item_code: string
@@ -113,16 +114,21 @@ export default function PromoPage() {
     promo.brand.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
   // Generate image URL from ERP
   const getImageUrl = (imagePath?: string) => {
     if (!imagePath) return null
     
-    // Handle the new API structure: /private/files/filename
-    if (imagePath.startsWith('/private/files/')) {
-      return `${ERP_CONFIG.BASE_URL}${imagePath}`
-    }
-    
-    // Fallback for old structure
+    // Remove leading slash if present and construct full URL
     const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath
     return `${ERP_CONFIG.BASE_URL}/${cleanPath}`
   }
@@ -163,21 +169,17 @@ export default function PromoPage() {
     const [imageError, setImageError] = useState(false)
 
     return (
-      <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-champagne-200 dark:border-dark-border overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
+      <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-champagne-200 dark:border-dark-border overflow-hidden hover:shadow-xl transition-shadow duration-300">
         {/* Image Section */}
-        <div className="relative aspect-square bg-gradient-to-br from-asparagus-50 to-champagne-100 dark:from-dark-bg dark:to-dark-surface overflow-hidden flex-shrink-0">
+        <div className="relative h-48 bg-gradient-to-br from-asparagus-50 to-champagne-100 dark:from-dark-bg dark:to-dark-surface">
           {imageUrl && !imageError ? (
-            <img 
-              src={imageUrl} 
+            <Image
+              src={imageUrl}
               alt={promo.nama}
-              className="w-full h-full object-cover"
-              onError={() => {
-                console.log('❌ [PROMO] Image failed to load:', imageUrl)
-                setImageError(true)
-              }}
-              onLoad={() => {
-                console.log('✅ [PROMO] Image loaded successfully:', imageUrl)
-              }}
+              fill
+              className="object-cover"
+              onError={() => setImageError(true)}
+              unoptimized
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -215,16 +217,10 @@ export default function PromoPage() {
               {promo.brand}
             </Badge>
           </div>
-
-          {/* Debug Info - Temporary */}
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white p-1 rounded text-xs">
-            <p>IMG: {promo.image ? 'YES' : 'NO'}</p>
-            <p>URL: {imageUrl ? 'OK' : 'NULL'}</p>
-          </div>
         </div>
 
         {/* Content Section */}
-        <div className="p-4 flex flex-col flex-1 min-h-0">
+        <div className="p-4">
           {/* Promo Code */}
           <div className="mb-2">
             <span className="inline-block px-2 py-1 text-xs font-mono bg-asparagus-100 dark:bg-asparagus-900/30 text-asparagus-700 dark:text-asparagus-400 rounded">
@@ -254,7 +250,7 @@ export default function PromoPage() {
           </div>
 
           {/* Free Items Count */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-dark-border mb-3">
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-dark-border">
             <div className="flex items-center gap-2 text-sm">
               <svg className="h-5 w-5 text-asparagus-600 dark:text-asparagus-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -275,25 +271,13 @@ export default function PromoPage() {
             </Button>
           </div>
 
-          {/* Use This Voucher Button */}
-          <div className="mb-3">
-            <Button
-              onClick={() => router.push(`/voucher/${encodeURIComponent(promo.kode)}`)}
-              variant="primary"
-              className="w-full text-sm font-semibold"
-              disabled={isExpired || isInactive}
-            >
-              Use This Voucher
-            </Button>
-          </div>
-
           {/* Expanded Free Items */}
           {expandedRows.has(promo.kode) && promo.free_items && promo.free_items.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
               <h4 className="text-sm font-semibold text-jet-800 dark:text-white mb-2">Free Items:</h4>
-              <div className="max-h-64 overflow-y-auto space-y-2 bg-gray-50 dark:bg-dark-bg rounded-lg p-3">
+              <div className="space-y-2 max-h-60 overflow-y-auto">
                 {promo.free_items.map((item, idx) => (
-                  <div key={idx} className="bg-white dark:bg-dark-surface rounded p-2 text-xs shadow-sm">
+                  <div key={idx} className="bg-gray-50 dark:bg-dark-bg rounded p-2 text-xs">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-jet-700 dark:text-gray-300 flex-1">{item.item_name}</span>
                       <span className="text-asparagus-600 dark:text-asparagus-400 font-semibold ml-2">
@@ -478,14 +462,14 @@ export default function PromoPage() {
               </div>
             )}
 
-            {/* Promo Display - Grid or Table */}
+            {/* Promo Table */}
             {!loading && !error && (
               <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-champagne-200 dark:border-dark-border overflow-hidden">
                 {filteredPromos.length === 0 ? (
                   <div className="p-12 text-center">
                     <div className="text-gray-400 dark:text-gray-500 mb-4">
                       <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2m16-7H4m16 0l-2-9H6l-2 9" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2m16-7H4m16 0l-2-9H6l-2 9" />
                       </svg>
                     </div>
                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -497,194 +481,163 @@ export default function PromoPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Grid View */}
-                    {viewMode === 'grid' && (
-                      <div className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          {currentPromos.map((promo) => (
-                            <PromoCard key={promo.kode} promo={promo} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Table View */}
-                    {viewMode === 'table' && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-gray-50 dark:bg-jet-800">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Promo Code
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Name
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Brand
-                              </th>
-                              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Value
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Expired
-                              </th>
-                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Free Items
-                              </th>
-                              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Action
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white dark:bg-dark-surface divide-y divide-gray-200 dark:divide-dark-border">
-                            {currentPromos.map((promo, index) => {
-                              const isExpired = new Date(promo.expired) < new Date()
-                              const isInactive = promo.nonaktif
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 dark:bg-jet-800">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Promo Code
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Name
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Brand
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Value
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Expired
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Free Items
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-dark-surface divide-y divide-gray-200 dark:divide-dark-border">
+                          {currentPromos.map((promo, index) => (
+                            <React.Fragment key={promo.kode}>
+                              <tr className={index % 2 === 0 ? 'bg-white dark:bg-dark-surface' : 'bg-gray-50 dark:bg-jet-900/50'}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-jet-800 dark:text-white font-mono">
+                                    {promo.kode}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="text-sm text-jet-800 dark:text-white max-w-xs truncate" title={promo.nama}>
+                                    {promo.nama}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <Badge variant="secondary" size="sm">
+                                    {promo.brand}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                  <div className="text-sm font-semibold text-asparagus-700 dark:text-asparagus-400">
+                                    {formatCurrency(promo.nilai)}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-jet-600 dark:text-gray-300">
+                                    {formatDate(promo.expired)}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <Badge variant="info" size="sm">
+                                    {promo.free_items.length} item{promo.free_items.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                  <Button
+                                    onClick={() => toggleRowExpansion(promo.kode)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                  >
+                                    {expandedRows.has(promo.kode) ? (
+                                      <>
+                                        <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                        Hide
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                        Details
+                                      </>
+                                    )}
+                                  </Button>
+                                </td>
+                              </tr>
                               
-                              return (
-                                <React.Fragment key={promo.kode}>
-                                  <tr className={index % 2 === 0 ? 'bg-white dark:bg-dark-surface' : 'bg-gray-50 dark:bg-jet-900/50'}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm font-medium text-jet-800 dark:text-white font-mono">
-                                        {promo.kode}
+                              {/* Expanded Row Details */}
+                              {expandedRows.has(promo.kode) && (
+                                <tr>
+                                  <td colSpan={7} className="px-6 py-4 bg-gray-50 dark:bg-jet-900/30">
+                                    <div className="space-y-4">
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-jet-800 dark:text-white mb-2">
+                                          Promo Details:
+                                        </h4>
+                                        <p className="text-sm text-jet-600 dark:text-gray-300">
+                                          {promo.nama}
+                                        </p>
                                       </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                      <div className="text-sm text-jet-800 dark:text-white max-w-xs truncate" title={promo.nama}>
-                                        {promo.nama}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <Badge variant="secondary" size="sm">
-                                        {promo.brand}
-                                      </Badge>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                                      <div className="text-sm font-semibold text-asparagus-700 dark:text-asparagus-400">
-                                        {formatCurrency(promo.nilai)}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm text-jet-600 dark:text-gray-300">
-                                        {formatDate(promo.expired)}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                                      {isInactive ? (
-                                        <Badge variant="danger" size="sm">Nonaktif</Badge>
-                                      ) : isExpired ? (
-                                        <Badge variant="warning" size="sm">Expired</Badge>
-                                      ) : (
-                                        <Badge variant="success" size="sm">Active</Badge>
-                                      )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                                      <Badge variant="info" size="sm">
-                                        {promo.free_items.length} item{promo.free_items.length !== 1 ? 's' : ''}
-                                      </Badge>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                                      <Button
-                                        onClick={() => toggleRowExpansion(promo.kode)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs"
-                                      >
-                                        {expandedRows.has(promo.kode) ? (
-                                          <>
-                                            <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                            </svg>
-                                            Hide
-                                          </>
-                                        ) : (
-                                          <>
-                                            <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                            Details
-                                          </>
-                                        )}
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                  
-                                  {/* Expanded Row Details */}
-                                  {expandedRows.has(promo.kode) && (
-                                    <tr>
-                                      <td colSpan={8} className="px-6 py-4 bg-gray-50 dark:bg-jet-900/30">
-                                        <div className="space-y-4">
-                                          <div>
-                                            <h4 className="text-sm font-semibold text-jet-800 dark:text-white mb-2">
-                                              Promo Details:
-                                            </h4>
-                                            <p className="text-sm text-jet-600 dark:text-gray-300">
-                                              {promo.nama}
-                                            </p>
-                                          </div>
-                                          
-                                          <div>
-                                            <h4 className="text-sm font-semibold text-jet-800 dark:text-white mb-3">
-                                              Free Items ({promo.free_items.length}):
-                                            </h4>
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                              {promo.free_items.map((item, itemIndex) => (
-                                                <div key={itemIndex} className="bg-white dark:bg-dark-surface p-3 rounded-md border border-gray-200 dark:border-dark-border">
-                                                  <div className="flex justify-between items-start mb-2">
-                                                    <div className="flex-1 min-w-0">
-                                                      <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
-                                                        {item.item_code}
-                                                      </p>
-                                                      <p className="text-sm font-medium text-jet-800 dark:text-white">
-                                                        {item.item_name}
-                                                      </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                      <Badge variant="success" size="sm">
-                                                        FREE
-                                                      </Badge>
-                                                    </div>
-                                                  </div>
-                                                  <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                                                    <span>Qty: {item.qty} {item.stock_uom}</span>
-                                                    <span className="line-through">
-                                                      {formatCurrency(item.price_list_rate)}
-                                                    </span>
-                                                  </div>
+                                      
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-jet-800 dark:text-white mb-3">
+                                          Free Items ({promo.free_items.length}):
+                                        </h4>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                          {promo.free_items.map((item, itemIndex) => (
+                                            <div key={itemIndex} className="bg-white dark:bg-dark-surface p-3 rounded-md border border-gray-200 dark:border-dark-border">
+                                              <div className="flex justify-between items-start mb-2">
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                                                    {item.item_code}
+                                                  </p>
+                                                  <p className="text-sm font-medium text-jet-800 dark:text-white">
+                                                    {item.item_name}
+                                                  </p>
                                                 </div>
-                                              ))}
+                                                <div className="text-right">
+                                                  <Badge variant="success" size="sm">
+                                                    FREE
+                                                  </Badge>
+                                                </div>
+                                              </div>
+                                              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                                                <span>Qty: {item.qty} {item.stock_uom}</span>
+                                                <span className="line-through">
+                                                  {formatCurrency(item.price_list_rate)}
+                                                </span>
+                                              </div>
                                             </div>
-                                          </div>
-
-                                          {/* Use Voucher Button */}
-                                          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-dark-border">
-                                            <Button
-                                              onClick={() => router.push(`/voucher/${encodeURIComponent(promo.kode)}`)}
-                                              variant="primary"
-                                              size="sm"
-                                              className="w-full sm:w-auto"
-                                            >
-                                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                              </svg>
-                                              Use This Voucher
-                                            </Button>
-                                          </div>
+                                          ))}
                                         </div>
-                                      </td>
-                                    </tr>
-                                  )}
-                                </React.Fragment>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                                      </div>
+
+                                      {/* Use Voucher Button */}
+                                      <div className="mt-4 pt-3 border-t border-gray-200 dark:border-dark-border">
+                                        <Button
+                                          onClick={() => router.push(`/voucher/${encodeURIComponent(promo.kode)}`)}
+                                          variant="primary"
+                                          size="sm"
+                                          className="w-full sm:w-auto"
+                                        >
+                                          <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                          </svg>
+                                          Use This Voucher
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {/* Pagination */}
                     {totalPages > 1 && (
@@ -772,7 +725,7 @@ export default function PromoPage() {
                                 className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                               >
                                 <span className="sr-only">Next</span>
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                                <svg className="h-5 w-5" fill="none" viewBox="0 20 20" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                               </Button>

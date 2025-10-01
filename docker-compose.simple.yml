@@ -27,8 +27,33 @@ services:
       - AUTH_CHECK_INTERVAL_MINUTES=5
       - COOKIE_MAX_AGE_MINUTES=120
       - REDIS_URL=redis://redis:6379
+      # SSH Tunnel Configuration
+      - USE_SSH_TUNNEL=true
+      - SSH_LIVE_HOST=192.168.10.129
+      - SSH_LIVE_PORT=22
+      - SSH_LIVE_USER=root
+      - SSH_LIVE_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+      - SSH_DEV_HOST=192.168.10.159
+      - SSH_DEV_PORT=22
+      - SSH_DEV_USER=root
+      - SSH_DEV_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+      # Database Configuration
+      - DB_LIVE_HOST=127.0.0.1
+      - DB_LIVE_PORT=3306
+      - DB_LIVE_USER=readonly_user
+      - DB_LIVE_PASSWORD=1a176bee987852f3e928
+      - DB_LIVE_DATABASE=_3564332c797595cf
+      - DB_DEV_HOST=127.0.0.1
+      - DB_DEV_PORT=3306
+      - DB_DEV_USER=readonly_user
+      - DB_DEV_PASSWORD=1a176bee987852f3e928
+      - DB_DEV_DATABASE=_3e6dae82f3bc05a6
+      - DB_REPORTING_ENV=LIVE
     env_file:
       - .env.local
+    volumes:
+      # Mount SSH private key from secrets directory (git ignored)
+      - ./secrets/ssh_private_key:/home/nextjs/.ssh/andrew.unknown:ro
     restart: unless-stopped
     networks:
       - sinergia-network

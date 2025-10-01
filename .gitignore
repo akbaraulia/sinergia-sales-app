@@ -40,4 +40,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# SSH Keys - NEVER COMMIT THESE!
+andrew.unknown
+id_rsa*
+*.key
+*.ppk
+ssh_keys/
+.ssh/
+
+# SSL certificates and sensitive configs
 nginx/ssl/
+secrets/
+*.crt

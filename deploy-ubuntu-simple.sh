@@ -68,6 +68,30 @@ COOKIE_MAX_AGE_MINUTES=120
 
 # Redis (using port 6380 to avoid conflicts)
 REDIS_URL=redis://redis:6379
+
+# SSH Tunnel Configuration
+USE_SSH_TUNNEL=true
+SSH_LIVE_HOST=192.168.10.129
+SSH_LIVE_PORT=22
+SSH_LIVE_USER=root
+SSH_LIVE_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+SSH_DEV_HOST=192.168.10.159
+SSH_DEV_PORT=22
+SSH_DEV_USER=root
+SSH_DEV_PRIVATE_KEY_PATH=/home/nextjs/.ssh/andrew.unknown
+
+# Database Configuration (localhost because SSH tunnel maps to local ports)
+DB_LIVE_HOST=127.0.0.1
+DB_LIVE_PORT=3306
+DB_LIVE_USER=readonly_user
+DB_LIVE_PASSWORD=1a176bee987852f3e928
+DB_LIVE_DATABASE=_3564332c797595cf
+DB_DEV_HOST=127.0.0.1
+DB_DEV_PORT=3306
+DB_DEV_USER=readonly_user
+DB_DEV_PASSWORD=1a176bee987852f3e928
+DB_DEV_DATABASE=_3e6dae82f3bc05a6
+DB_REPORTING_ENV=LIVE
 EOF
 
 echo -e "${GREEN}✅ Environment file created: .env.ubuntu${NC}"
@@ -77,6 +101,23 @@ echo -e "${BLUE}ℹ️  Copying environment to .env.local for Docker...${NC}"
 cp .env.ubuntu .env.local
 
 echo -e "${GREEN}✅ Environment copied to .env.local${NC}"
+
+# Check SSH key
+echo -e "${BLUE}ℹ️  Checking SSH private key...${NC}"
+if [ ! -f "secrets/ssh_private_key" ]; then
+    echo -e "${YELLOW}⚠️  SSH private key 'secrets/ssh_private_key' not found!${NC}"
+    echo -e "${YELLOW}   Run the SSH key setup first: ./setup-ssh-keys.sh${NC}"
+    echo -e "${YELLOW}   Or manually copy your key to: secrets/ssh_private_key${NC}"
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ SSH private key found${NC}"
+    # Set proper permissions
+    chmod 600 secrets/ssh_private_key
+fi
 
 # Stop any existing containers
 echo -e "${BLUE}ℹ️  Stopping existing containers...${NC}"
