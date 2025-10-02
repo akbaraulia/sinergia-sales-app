@@ -56,8 +56,8 @@ COPY --from=base --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=base --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=base --chown=nextjs:nodejs /app/public ./public
 
-# Copy SSH private key if it exists
-COPY --chown=nextjs:nodejs andrew.unknown* /home/nextjs/.ssh/ 2>/dev/null || true
+# SSH private key will be mounted as volume at runtime
+# No need to copy during build - this improves security
 
 # Set user
 USER nextjs
