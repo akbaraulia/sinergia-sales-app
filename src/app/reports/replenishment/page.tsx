@@ -132,48 +132,107 @@ export default function ReplenishmentReportPage() {
     return `Rp ${Math.round(num).toLocaleString('id-ID')}`
   }
 
-  const exportToCSV = () => {
-    if (data.length === 0) return
+  const fetchAllDataForExport = async (): Promise<ReplenishmentReportRow[]> => {
+    try {
+      const params = new URLSearchParams()
+      if (search) params.append('search', search)
+      if (filters.branch) params.append('branch', filters.branch)
+      if (filters.warehouse) params.append('warehouse', filters.warehouse)
+      if (filters.itemCode) params.append('item_code', filters.itemCode)
+      if (filters.company) params.append('company', filters.company)
+      // Fetch all data without pagination
+      params.append('limit', '999999')
 
-    const headers = [
-      'Company', 'Branch Code', 'Branch Name', 'Warehouse', 'Item Code', 'Item Name',
-      'Current Qty', 'Current Stock Value',
-      `Sales ${monthLabels.m0}`, `Sales ${monthLabels.m1}`, `Sales ${monthLabels.m2}`, `Sales ${monthLabels.m3}`,
-      `Material Issue/BBP ${monthLabels.m0}`, `Material Issue/BBP ${monthLabels.m1}`, `Material Issue/BBP ${monthLabels.m2}`, `Material Issue/BBP ${monthLabels.m3}`,
-      'Adjusted Current Qty', 'Avg Flow M1-M3', 'DOI Adjusted'
-    ]
+      const url = `/api/reports/replenishment${params.toString() ? `?${params.toString()}` : ''}`
+      const response = await fetch(url)
+      const result: ReplenishmentReportResponse = await response.json()
 
-    const csvRows = [
-      headers.join(','),
-      ...data.map(row => [
-        row.company,
-        row.branch_code,
-        `"${row.branch_name}"`,
-        row.warehouse,
-        row.item_code,
-        `"${row.item_name || ''}"`,
-        row.current_qty,
-        row.current_stock_value,
-        row.delivery_note_qty_m0,
-        row.delivery_note_qty_m1,
-        row.delivery_note_qty_m2,
-        row.delivery_note_qty_m3,
-        row.material_issue_qty_m0,
-        row.material_issue_qty_m1,
-        row.material_issue_qty_m2,
-        row.material_issue_qty_m3,
-        row.adjusted_current_qty,
-        row.avg_flow_m1_to_m3 || '',
-        row.doi_adjusted || ''
-      ].join(','))
-    ]
+      if (result.success && result.data) {
+        return result.data
+      }
+      return []
+    } catch (err) {
+      console.error('Failed to fetch all data for export:', err)
+      return []
+    }
+  }
 
-    const csvContent = csvRows.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `replenishment-report-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
+  const exportToCSV = async () => {
+    if (loading) return
+
+    // Show loading state
+    const originalButtonText = 'Export CSV'
+    const exportButton = document.querySelector('[data-export-btn]') as HTMLButtonElement
+    if (exportButton) {
+      exportButton.textContent = '⏳ Fetching all data...'
+      exportButton.disabled = true
+    }
+
+    try {
+      // Fetch ALL data (not just current page)
+      const allData = await fetchAllDataForExport()
+      
+      if (allData.length === 0) {
+        alert('No data to export')
+        return
+      }
+
+      const headers = [
+        'Company', 'Branch Code', 'Branch Name', 'Warehouse', 'Item Code', 'Item Name',
+        'Current Qty', 'Current Stock Value',
+        `Sales ${monthLabels.m0}`, `Sales ${monthLabels.m1}`, `Sales ${monthLabels.m2}`, `Sales ${monthLabels.m3}`,
+        `Material Issue/BBP ${monthLabels.m0}`, `Material Issue/BBP ${monthLabels.m1}`, `Material Issue/BBP ${monthLabels.m2}`, `Material Issue/BBP ${monthLabels.m3}`,
+        'Adjusted Current Qty', 'Avg Flow M1-M3', 'DOI Adjusted'
+      ]
+
+      const csvRows = [
+        headers.join(','),
+        ...allData.map(row => [
+          row.company,
+          row.branch_code,
+          `"${row.branch_name}"`,
+          row.warehouse,
+          row.item_code,
+          `"${row.item_name || ''}"`,
+          row.current_qty,
+          row.current_stock_value,
+          row.delivery_note_qty_m0,
+          row.delivery_note_qty_m1,
+          row.delivery_note_qty_m2,
+          row.delivery_note_qty_m3,
+          row.material_issue_qty_m0,
+          row.material_issue_qty_m1,
+          row.material_issue_qty_m2,
+          row.material_issue_qty_m3,
+          row.adjusted_current_qty,
+          row.avg_flow_m1_to_m3 || '',
+          row.doi_adjusted || ''
+        ].join(','))
+      ]
+
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `replenishment-report-${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+
+      // Show success message
+      if (exportButton) {
+        exportButton.textContent = `✅ Exported ${allData.length} rows`
+        setTimeout(() => {
+          exportButton.textContent = originalButtonText
+          exportButton.disabled = false
+        }, 2000)
+      }
+    } catch (err) {
+      console.error('Export failed:', err)
+      alert('Failed to export data')
+      if (exportButton) {
+        exportButton.textContent = originalButtonText
+        exportButton.disabled = false
+      }
+    }
   }
 
   return (
@@ -271,7 +330,8 @@ export default function ReplenishmentReportPage() {
             </button>
             <button
               onClick={exportToCSV}
-              disabled={data.length === 0}
+              disabled={loading}
+              data-export-btn
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               📥 Export CSV

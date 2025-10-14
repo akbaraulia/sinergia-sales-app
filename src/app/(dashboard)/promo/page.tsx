@@ -108,9 +108,9 @@ export default function PromoPage() {
 
   // Filter promos based on search
   const filteredPromos = promos.filter(promo =>
-    promo.kode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    promo.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    promo.brand.toLowerCase().includes(searchQuery.toLowerCase())
+    promo.kode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    promo.nama?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    promo.brand?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Generate image URL from ERP

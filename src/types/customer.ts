@@ -1,5 +1,10 @@
 // Customer Data Types
 
+export interface SalesTeamMember {
+  sales_person: string
+  sales_person_name: string
+}
+
 export interface Customer {
   name: string
   customer_name: string
@@ -19,6 +24,7 @@ export interface Customer {
   custom_nama_salontoko?: string | null
   custom_lifetime_omset?: number
   calculated_loyalty_points?: number
+  sales_team?: SalesTeamMember[]
 }
 
 export interface CustomerFilters {

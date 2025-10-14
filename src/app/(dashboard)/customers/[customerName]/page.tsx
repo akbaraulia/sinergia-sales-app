@@ -411,6 +411,48 @@ export default function CustomerDetailPage() {
                   </div>
                 </div>
 
+                {/* Sales Team */}
+                {customer.sales_team && customer.sales_team.length > 0 && (
+                  <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg p-6 border border-champagne-200 dark:border-dark-border">
+                    <h3 className="text-lg font-semibold text-jet-800 dark:text-white mb-4 flex items-center">
+                      <svg className="h-5 w-5 mr-2 text-asparagus-600 dark:text-asparagus-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      Sales Team
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {customer.sales_team.map((member, index) => (
+                        <div 
+                          key={index}
+                          className="flex items-center space-x-3 p-4 bg-gradient-to-r from-asparagus-50 to-champagne-50 dark:from-asparagus-900/20 dark:to-champagne-900/20 rounded-lg border border-asparagus-200 dark:border-asparagus-800"
+                        >
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 bg-gradient-to-br from-asparagus to-asparagus-700 rounded-full flex items-center justify-center">
+                              <span className="text-lg font-bold text-white">
+                                {member.sales_person_name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-jet-800 dark:text-white truncate">
+                              {member.sales_person_name}
+                            </p>
+                            <p className="text-xs text-jet-600 dark:text-gray-400 truncate">
+                              {member.sales_person}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <Badge variant="success" size="sm">
+                              Active
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg p-6 border border-champagne-200 dark:border-dark-border">
                   <h3 className="text-lg font-semibold text-jet-800 dark:text-white mb-4">
