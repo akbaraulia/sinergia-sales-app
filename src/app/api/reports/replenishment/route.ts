@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db/mysql'
-import type { ReplenishmentReportRow, ReplenishmentReportResponse } from '@/types/replenishment'
+import type { ReplenishmentReportRow, ReplenishmentReportResponse, WarehouseData } from '@/types/replenishment'
 
 const REPLENISHMENT_QUERY = `
 /* Replenishment Monthly Pivot (m0..m3) + Override Jun/Jul/Agu 2025 */
@@ -259,43 +259,159 @@ export async function GET(request: Request) {
 
     const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
 
-    // Modified query with WHERE clause and LIMIT
+    // Modified query with WHERE clause (no LIMIT yet, we'll pivot first)
     const query = `
 ${REPLENISHMENT_QUERY.substring(0, REPLENISHMENT_QUERY.lastIndexOf('ORDER BY'))}
 ${whereClause}
 ORDER BY bp.branch_name, bp.warehouse, bp.item_code
-LIMIT ${limit} OFFSET ${offset}
 `
 
     // Execute main query
     const startTime = Date.now()
-    const rows = await executeQuery<ReplenishmentReportRow>(query)
+    interface RawRow {
+      company: string
+      branch_code: string
+      branch_name: string
+      warehouse: string
+      item_code: string
+      item_name: string
+      current_qty: number
+      current_stock_value: number
+      delivery_note_qty_m0: number
+      delivery_note_qty_m1: number
+      delivery_note_qty_m2: number
+      delivery_note_qty_m3: number
+      material_issue_qty_m0: number
+      material_issue_qty_m1: number
+      material_issue_qty_m2: number
+      material_issue_qty_m3: number
+      adjusted_current_qty: number
+      avg_flow_m1_to_m3: number
+      doi_adjusted: number | null
+    }
+    const rawRows = await executeQuery<RawRow>(query)
     const queryTime = Date.now() - startTime
 
-    console.log(`✅ [REPLENISHMENT] Query executed in ${queryTime}ms, returned ${rows.length} rows`)
+    console.log(`✅ [REPLENISHMENT] Query executed in ${queryTime}ms, returned ${rawRows.length} raw rows`)
 
-    // Get total count for pagination
-    const countQuery = `
-SELECT COUNT(*) as total
-FROM (
-${REPLENISHMENT_QUERY.substring(REPLENISHMENT_QUERY.indexOf('WITH params'), REPLENISHMENT_QUERY.lastIndexOf('ORDER BY'))}
-${whereClause}
-) as count_table
-`
-    const countResult = await executeQuery<{ total: number }>(countQuery)
-    const total = countResult[0]?.total || 0
+    // Pivot the data: Group by item_code, aggregate warehouses horizontally
+    const pivotMap = new Map<string, ReplenishmentReportRow>()
+    
+    // First pass: collect all unique warehouses to ensure consistency
+    const allWarehouses = new Map<string, { warehouse: string, branch_name: string, branch_code: string }>()
+    rawRows.forEach(raw => {
+      const whKey = raw.warehouse
+      if (!allWarehouses.has(whKey)) {
+        allWarehouses.set(whKey, {
+          warehouse: raw.warehouse,
+          branch_name: raw.branch_name,
+          branch_code: raw.branch_code
+        })
+      }
+    })
+    
+    // Sort warehouses for consistent ordering
+    const sortedWarehouses = Array.from(allWarehouses.values()).sort((a, b) => {
+      // Sort by branch name, then warehouse name
+      const branchCompare = a.branch_name.localeCompare(b.branch_name)
+      return branchCompare !== 0 ? branchCompare : a.warehouse.localeCompare(b.warehouse)
+    })
+    
+    // Second pass: build pivot structure
+    rawRows.forEach(raw => {
+      const key = `${raw.company}|${raw.item_code}`
+      
+      if (!pivotMap.has(key)) {
+        // Initialize with all warehouses (with zeros)
+        const warehouseData: WarehouseData[] = sortedWarehouses.map(wh => ({
+          warehouse: wh.warehouse,
+          warehouse_name: wh.warehouse,
+          branch_code: wh.branch_code,
+          branch_name: wh.branch_name,
+          current_qty: 0,
+          current_stock_value: 0,
+          delivery_note_qty_m0: 0,
+          delivery_note_qty_m1: 0,
+          delivery_note_qty_m2: 0,
+          delivery_note_qty_m3: 0,
+          material_issue_qty_m0: 0,
+          material_issue_qty_m1: 0,
+          material_issue_qty_m2: 0,
+          material_issue_qty_m3: 0,
+          adjusted_current_qty: 0,
+          avg_flow_m1_to_m3: 0,
+          doi_adjusted: null
+        }))
+        
+        pivotMap.set(key, {
+          company: raw.company,
+          item_code: raw.item_code,
+          item_name: raw.item_name,
+          warehouses: warehouseData,
+          total_current_qty: 0,
+          total_stock_value: 0,
+          total_avg_flow: 0,
+          overall_doi: null
+        })
+      }
+      
+      const pivotRow = pivotMap.get(key)!
+      
+      // Find the warehouse index and update its data
+      const whIndex = pivotRow.warehouses.findIndex(w => w.warehouse === raw.warehouse)
+      if (whIndex !== -1) {
+        pivotRow.warehouses[whIndex] = {
+          warehouse: raw.warehouse,
+          warehouse_name: raw.warehouse,
+          branch_code: raw.branch_code,
+          branch_name: raw.branch_name,
+          current_qty: raw.current_qty,
+          current_stock_value: raw.current_stock_value,
+          delivery_note_qty_m0: raw.delivery_note_qty_m0,
+          delivery_note_qty_m1: raw.delivery_note_qty_m1,
+          delivery_note_qty_m2: raw.delivery_note_qty_m2,
+          delivery_note_qty_m3: raw.delivery_note_qty_m3,
+          material_issue_qty_m0: raw.material_issue_qty_m0,
+          material_issue_qty_m1: raw.material_issue_qty_m1,
+          material_issue_qty_m2: raw.material_issue_qty_m2,
+          material_issue_qty_m3: raw.material_issue_qty_m3,
+          adjusted_current_qty: raw.adjusted_current_qty,
+          avg_flow_m1_to_m3: raw.avg_flow_m1_to_m3,
+          doi_adjusted: raw.doi_adjusted
+        }
+        
+        // Update totals
+        pivotRow.total_current_qty += raw.current_qty || 0
+        pivotRow.total_stock_value += raw.current_stock_value || 0
+        pivotRow.total_avg_flow += raw.avg_flow_m1_to_m3 || 0
+      }
+    })
+    
+    // Calculate overall DOI for each item
+    pivotMap.forEach(row => {
+      if (row.total_avg_flow > 0) {
+        row.overall_doi = row.total_current_qty / row.total_avg_flow
+      }
+    })
+    
+    // Convert map to array and apply pagination
+    const allPivotedRows = Array.from(pivotMap.values())
+    const total = allPivotedRows.length
+    const totalPages = Math.ceil(total / limit)
+    const paginatedRows = allPivotedRows.slice(offset, offset + limit)
+
+    console.log(`📊 [REPLENISHMENT] Pivoted ${rawRows.length} raw rows into ${total} items`)
+    console.log(`📦 [REPLENISHMENT] Returning ${paginatedRows.length} rows (page ${page}/${totalPages}, total: ${total})`)
 
     const response: ReplenishmentReportResponse = {
       success: true,
-      data: rows,
+      data: paginatedRows,
       total: total,
       page: page,
       limit: limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: totalPages,
       timestamp: new Date().toISOString()
     }
-
-    console.log(`📦 [REPLENISHMENT] Returning ${rows.length} rows (page ${page}/${response.totalPages}, total: ${total})`)
 
     return NextResponse.json(response, {
       headers: {

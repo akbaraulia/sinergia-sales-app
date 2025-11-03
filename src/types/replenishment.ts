@@ -1,32 +1,40 @@
 // Replenishment Report Types
-export interface ReplenishmentReportRow {
-  company: string
+
+// Warehouse-specific data for pivoted view
+export interface WarehouseData {
+  warehouse: string
+  warehouse_name: string
   branch_code: string
   branch_name: string
-  warehouse: string
-  item_code: string
-  item_name: string
-  
-  // Current stock data
   current_qty: number
   current_stock_value: number
-  
-  // Sales quantities per month (m0=current, m1=1 month ago, etc)
   delivery_note_qty_m0: number
   delivery_note_qty_m1: number
   delivery_note_qty_m2: number
   delivery_note_qty_m3: number
-  
-  // Material Issue/BBP quantities per month
   material_issue_qty_m0: number
   material_issue_qty_m1: number
   material_issue_qty_m2: number
   material_issue_qty_m3: number
+  adjusted_current_qty: number
+  avg_flow_m1_to_m3: number
+  doi_adjusted: number | null
+}
+
+// Pivoted row - one row per item with all warehouses
+export interface ReplenishmentReportRow {
+  company: string
+  item_code: string
+  item_name: string
   
-  // Calculated fields
-  adjusted_current_qty: number        // current_qty (without transfer in)
-  avg_flow_m1_to_m3: number          // Average flow (sales + issue) for m1-m3
-  doi_adjusted: number | null        // Days of Inventory
+  // Array of warehouse data - each warehouse becomes a column group
+  warehouses: WarehouseData[]
+  
+  // Totals across all warehouses
+  total_current_qty: number
+  total_stock_value: number
+  total_avg_flow: number
+  overall_doi: number | null
 }
 
 export interface BranchWithWarehouses {

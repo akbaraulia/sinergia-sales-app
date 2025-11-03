@@ -47,6 +47,8 @@ id_rsa*
 *.ppk
 ssh_keys/
 .ssh/
+andrew.bkp
+ssh.unkwnown
 
 # SSL certificates and sensitive configs
 nginx/ssl/

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import type { ReplenishmentReportRow, ReplenishmentReportResponse, BranchWithWarehouses, StructuredFiltersResponse } from '@/types/replenishment'
 
 export default function ReplenishmentReportPage() {
@@ -36,6 +36,17 @@ export default function ReplenishmentReportPage() {
     m1: getMonthLabel(1),
     m2: getMonthLabel(2),
     m3: getMonthLabel(3)
+  }
+
+  // Buffer mapping per branch
+  const getBufferByBranch = (branchCode: string): number => {
+    if (!branchCode) return 1 // Default if no branch code
+    const branch = branchCode.toUpperCase()
+    if (['JKT', 'HO', 'MKP'].includes(branch)) return 1
+    if (['YGY', 'SBY'].includes(branch)) return 2
+    if (['MDN', 'PKB', 'PLG', 'PDG', 'DP', 'PKU'].includes(branch)) return 2
+    if (['KPG', 'MND', 'MKS', 'BKP', 'PTK'].includes(branch)) return 4
+    return 1 // Default buffer
   }
 
   // Fetch data
@@ -177,53 +188,120 @@ export default function ReplenishmentReportPage() {
         return
       }
 
+      // Collect ALL unique warehouses across all items (not just first item)
+      const allWarehousesSet = new Set<string>()
+      const warehouseDetails = new Map<string, { branch: string, warehouse: string }>()
+      
+      allData.forEach(row => {
+        row.warehouses.forEach(wh => {
+          const key = wh.warehouse
+          allWarehousesSet.add(key)
+          if (!warehouseDetails.has(key)) {
+            warehouseDetails.set(key, {
+              branch: wh.branch_name,
+              warehouse: wh.warehouse
+            })
+          }
+        })
+      })
+
+      // Sort warehouses for consistent ordering
+      const sortedWarehouseKeys = Array.from(allWarehousesSet).sort((a, b) => {
+        const detailA = warehouseDetails.get(a)!
+        const detailB = warehouseDetails.get(b)!
+        const branchCompare = detailA.branch.localeCompare(detailB.branch)
+        return branchCompare !== 0 ? branchCompare : detailA.warehouse.localeCompare(detailB.warehouse)
+      })
+
+      // Build dynamic headers based on ALL warehouses
+      const warehouseHeaders: string[] = []
+      sortedWarehouseKeys.forEach(whKey => {
+        const detail = warehouseDetails.get(whKey)!
+        const whPrefix = `${detail.branch} - ${detail.warehouse}`
+        warehouseHeaders.push(
+          `${whPrefix} - Total Stock`,
+          `${whPrefix} - Sales ${monthLabels.m0}`,
+          `${whPrefix} - Sales ${monthLabels.m1}`,
+          `${whPrefix} - Sales ${monthLabels.m2}`,
+          `${whPrefix} - Sales ${monthLabels.m3}`,
+          `${whPrefix} - BBK ${monthLabels.m0}`,
+          `${whPrefix} - BBK ${monthLabels.m1}`,
+          `${whPrefix} - BBK ${monthLabels.m2}`,
+          `${whPrefix} - BBK ${monthLabels.m3}`,
+          `${whPrefix} - Avg Flow`,
+          `${whPrefix} - DOI`,
+          `${whPrefix} - REPLENISHMENT`
+        )
+      })
+
       const headers = [
-        'Company', 'Branch Code', 'Branch Name', 'Warehouse', 'Item Code', 'Item Name',
-        'Current Qty', 'Current Stock Value',
-        `Sales ${monthLabels.m0}`, `Sales ${monthLabels.m1}`, `Sales ${monthLabels.m2}`, `Sales ${monthLabels.m3}`,
-        `Material Issue/BBP ${monthLabels.m0}`, `Material Issue/BBP ${monthLabels.m1}`, `Material Issue/BBP ${monthLabels.m2}`, `Material Issue/BBP ${monthLabels.m3}`,
-        'Adjusted Current Qty', 'Avg Flow M1-M3', 'DOI Adjusted'
+        'Company',
+        'Item Code',
+        'Item Name',
+        ...warehouseHeaders,
+        'Total Qty',
+        'Total Stock Value',
+        'Overall DOI'
       ]
 
       const csvRows = [
         headers.join(','),
-        ...allData.map(row => [
-          row.company,
-          row.branch_code,
-          `"${row.branch_name}"`,
-          row.warehouse,
-          row.item_code,
-          `"${row.item_name || ''}"`,
-          row.current_qty,
-          row.current_stock_value,
-          row.delivery_note_qty_m0,
-          row.delivery_note_qty_m1,
-          row.delivery_note_qty_m2,
-          row.delivery_note_qty_m3,
-          row.material_issue_qty_m0,
-          row.material_issue_qty_m1,
-          row.material_issue_qty_m2,
-          row.material_issue_qty_m3,
-          row.adjusted_current_qty,
-          row.avg_flow_m1_to_m3 || '',
-          row.doi_adjusted || ''
-        ].join(','))
+        ...allData.map(row => {
+          const warehouseData: (string | number)[] = []
+          
+          // For each warehouse in sorted order, find its data or use 0
+          sortedWarehouseKeys.forEach(whKey => {
+            const wh = row.warehouses.find(w => w.warehouse === whKey)
+            if (wh) {
+              const buffer = getBufferByBranch(wh.branch_code)
+              const replenishment = wh.current_qty - (wh.avg_flow_m1_to_m3 * buffer)
+              
+              warehouseData.push(
+                wh.current_qty,
+                wh.delivery_note_qty_m0,
+                wh.delivery_note_qty_m1,
+                wh.delivery_note_qty_m2,
+                wh.delivery_note_qty_m3,
+                wh.material_issue_qty_m0,
+                wh.material_issue_qty_m1,
+                wh.material_issue_qty_m2,
+                wh.material_issue_qty_m3,
+                wh.avg_flow_m1_to_m3,
+                wh.doi_adjusted || '',
+                replenishment
+              )
+            } else {
+              // Warehouse not present for this item - fill with zeros
+              warehouseData.push(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0)
+            }
+          })
+
+          return [
+            row.company,
+            row.item_code,
+            `"${row.item_name || ''}"`,
+            ...warehouseData,
+            row.total_current_qty,
+            row.total_stock_value,
+            row.overall_doi || ''
+          ].join(',')
+        })
       ]
 
       const csvContent = csvRows.join('\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `replenishment-report-${new Date().toISOString().split('T')[0]}.csv`
+      link.download = `replenishment-report-pivoted-${new Date().toISOString().split('T')[0]}.csv`
       link.click()
 
       // Show success message
       if (exportButton) {
-        exportButton.textContent = `✅ Exported ${allData.length} rows`
+        exportButton.textContent = `✅ Exported ${allData.length} items × ${sortedWarehouseKeys.length} warehouses`
         setTimeout(() => {
           exportButton.textContent = originalButtonText
           exportButton.disabled = false
-        }, 2000)
+        }, 3000)
       }
     } catch (err) {
       console.error('Export failed:', err)
@@ -241,11 +319,14 @@ export default function ReplenishmentReportPage() {
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            📊 Replenishment Report
+            📊 Replenishment Report (Pivoted View)
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Stock analysis with Sales and Material Issue/BBP data - Dynamic monthly views (current month through 3 months ago)
+            Stock analysis per item with all warehouses displayed horizontally - Much lighter CSV exports! 🚀
           </p>
+          <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+            💡 One row per item, all warehouses shown as columns - Perfect for daily email reports
+          </div>
         </div>
 
         {/* Filters */}
@@ -379,63 +460,200 @@ export default function ReplenishmentReportPage() {
           </div>
         )}
 
-        {/* Data Table */}
+        {/* Data Table - Pivoted Horizontal View */}
         {!loading && !error && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Company</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Branch</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Warehouse</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Item Code</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Item Name</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Current Qty</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Stock Value</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m0}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m1}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m2}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-blue-700 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m3}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-purple-700 dark:text-purple-400 border-r dark:border-gray-600">Material Issue/BBP {monthLabels.m0}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-purple-700 dark:text-purple-400 border-r dark:border-gray-600">Material Issue/BBP {monthLabels.m1}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-purple-700 dark:text-purple-400 border-r dark:border-gray-600">Material Issue/BBP {monthLabels.m2}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-purple-700 dark:text-purple-400 border-r dark:border-gray-600">Material Issue/BBP {monthLabels.m3}</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Adj. Qty</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600">Avg Flow</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-red-700 dark:text-red-400">DOI</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {data.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">{row.company}</td>
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">
-                        <div className="font-medium">{row.branch_name}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-500">{row.branch_code}</div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">{row.warehouse}</td>
-                      <td className="px-4 py-3 font-mono text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">{row.item_code}</td>
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 max-w-xs truncate">{row.item_name}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">{formatNumber(row.current_qty)}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-700 text-xs">{formatCurrency(row.current_stock_value)}</td>
-                      <td className="px-4 py-3 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">{formatNumber(row.delivery_note_qty_m0)}</td>
-                      <td className="px-4 py-3 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">{formatNumber(row.delivery_note_qty_m1)}</td>
-                      <td className="px-4 py-3 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">{formatNumber(row.delivery_note_qty_m2)}</td>
-                      <td className="px-4 py-3 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">{formatNumber(row.delivery_note_qty_m3)}</td>
-                      <td className="px-4 py-3 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">{formatNumber(row.material_issue_qty_m0)}</td>
-                      <td className="px-4 py-3 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">{formatNumber(row.material_issue_qty_m1)}</td>
-                      <td className="px-4 py-3 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">{formatNumber(row.material_issue_qty_m2)}</td>
-                      <td className="px-4 py-3 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">{formatNumber(row.material_issue_qty_m3)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">{formatNumber(row.adjusted_current_qty)}</td>
-                      <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 border-r dark:border-gray-700">{formatNumber(row.avg_flow_m1_to_m3)}</td>
-                      <td className="px-4 py-3 text-right font-bold text-red-700 dark:text-red-400">
-                        {row.doi_adjusted !== null ? formatNumber(row.doi_adjusted) : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {data.length > 0 && (() => {
+                // Collect all unique warehouses from all items for consistent columns
+                const allWarehousesSet = new Set<string>()
+                const warehouseDetails = new Map<string, { branch: string, warehouse: string, branch_code: string }>()
+                
+                data.forEach(row => {
+                  row.warehouses.forEach(wh => {
+                    const key = wh.warehouse
+                    allWarehousesSet.add(key)
+                    if (!warehouseDetails.has(key)) {
+                      warehouseDetails.set(key, {
+                        branch: wh.branch_name,
+                        warehouse: wh.warehouse,
+                        branch_code: wh.branch_code
+                      })
+                    }
+                  })
+                })
+
+                // Sort warehouses for consistent ordering
+                const sortedWarehouseKeys = Array.from(allWarehousesSet).sort((a, b) => {
+                  const detailA = warehouseDetails.get(a)!
+                  const detailB = warehouseDetails.get(b)!
+                  const branchCompare = detailA.branch.localeCompare(detailB.branch)
+                  return branchCompare !== 0 ? branchCompare : detailA.warehouse.localeCompare(detailB.warehouse)
+                })
+
+                return (
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                      <tr>
+                        {/* Fixed columns */}
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-0 bg-gray-100 dark:bg-gray-700 z-10">
+                          Company
+                        </th>
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-10">
+                          Item Code
+                        </th>
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[200px] bg-gray-100 dark:bg-gray-700 z-10 min-w-[200px]">
+                          Item Name
+                        </th>
+                        
+                        {/* Dynamic warehouse columns - ALL warehouses */}
+                        {sortedWarehouseKeys.map((whKey) => {
+                          const detail = warehouseDetails.get(whKey)!
+                          return (
+                            <th key={whKey} colSpan={12} className="px-3 py-2 text-center font-semibold text-asparagus-700 dark:text-asparagus-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">
+                              {detail.branch} - {detail.warehouse}
+                            </th>
+                          )
+                        })}
+                        
+                        {/* Totals columns */}
+                        <th colSpan={3} className="px-3 py-2 text-center font-semibold text-red-700 dark:text-red-400 border-l-2 border-red-300">
+                          TOTALS
+                        </th>
+                      </tr>
+                      <tr>
+                        {/* Sub-headers for each warehouse */}
+                        {sortedWarehouseKeys.map((whKey) => (
+                          <Fragment key={whKey}>
+                            <th className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-600">Total Stock</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m0}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m1}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m3}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m0}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m1}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m3}</th>
+                            <th className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-600">Avg Flow</th>
+                            <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 border-r dark:border-gray-600">DOI</th>
+                            <th className="px-2 py-1 text-right text-orange-600 dark:text-orange-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">REPLENISHMENT</th>
+                          </Fragment>
+                        ))}
+                        
+                        {/* Total sub-headers */}
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 border-l-2 border-red-300">Total Qty</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400">Total Value</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400">Overall DOI</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {data.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                          {/* Fixed columns */}
+                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800">
+                            {row.company}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[100px] bg-white dark:bg-gray-800">
+                            {row.item_code}
+                          </td>
+                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[200px] bg-white dark:bg-gray-800 min-w-[200px]">
+                            {row.item_name}
+                          </td>
+                          
+                          {/* Dynamic warehouse data - ALL warehouses, fill with 0 if missing */}
+                          {sortedWarehouseKeys.map((whKey) => {
+                            const wh = row.warehouses.find(w => w.warehouse === whKey)
+                            if (wh) {
+                              const buffer = getBufferByBranch(wh.branch_code)
+                              const replenishment = wh.current_qty - (wh.avg_flow_m1_to_m3 * buffer)
+                              
+                              return (
+                                <Fragment key={whKey}>
+                                  <td className="px-2 py-2 text-right font-semibold text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">
+                                    {formatNumber(wh.current_qty)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.delivery_note_qty_m0)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.delivery_note_qty_m1)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.delivery_note_qty_m2)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.delivery_note_qty_m3)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.material_issue_qty_m0)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.material_issue_qty_m1)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.material_issue_qty_m2)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.material_issue_qty_m3)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-gray-700 dark:text-gray-300 border-r dark:border-gray-700">
+                                    {formatNumber(wh.avg_flow_m1_to_m3)}
+                                  </td>
+                                  <td className={`px-2 py-2 text-right font-bold border-r dark:border-gray-700 ${
+                                    wh.doi_adjusted !== null && wh.doi_adjusted < 30 ? 'text-red-600 dark:text-red-400' :
+                                    wh.doi_adjusted !== null && wh.doi_adjusted > 90 ? 'text-orange-600 dark:text-orange-400' :
+                                    'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    {wh.doi_adjusted !== null ? formatNumber(wh.doi_adjusted) : '-'}
+                                  </td>
+                                  <td className={`px-2 py-2 text-right font-bold border-r-2 border-asparagus-300 dark:border-asparagus-600 ${
+                                    replenishment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    {formatNumber(replenishment)}
+                                  </td>
+                                </Fragment>
+                              )
+                            } else {
+                              // Warehouse not present for this item - show dashes
+                              return (
+                                <Fragment key={whKey}>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r-2 border-asparagus-300 dark:border-asparagus-600">-</td>
+                                </Fragment>
+                              )
+                            }
+                          })}
+                          
+                          {/* Totals */}
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 border-l-2 border-red-300">
+                            {formatNumber(row.total_current_qty)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400">
+                            {formatCurrency(row.total_stock_value)}
+                          </td>
+                          <td className={`px-2 py-2 text-right font-bold ${
+                            row.overall_doi !== null && row.overall_doi < 30 ? 'text-red-600 dark:text-red-400' :
+                            row.overall_doi !== null && row.overall_doi > 90 ? 'text-orange-600 dark:text-orange-400' :
+                            'text-green-600 dark:text-green-400'
+                          }`}>
+                            {row.overall_doi !== null ? formatNumber(row.overall_doi) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              })()}
             </div>
 
             {data.length === 0 && (
