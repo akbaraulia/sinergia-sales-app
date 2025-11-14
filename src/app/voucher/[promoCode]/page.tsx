@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import AuthGuard from '@/components/common/AuthGuard'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { ConfirmModal } from '@/components/ui/Modal'
 import { useToast } from '@/components/common/ToastProvider'
 import { useAuthStore } from '@/store/authStore'
 import { formatCurrency } from '@/lib/utils/format'
@@ -102,6 +103,7 @@ export default function VoucherFormPage() {
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   // Search states for dropdowns
   const [salesPersonSearch, setSalesPersonSearch] = useState('')
@@ -764,9 +766,9 @@ const canAddItem = (item: SellableItem): boolean => {
     })
   }, [removeFromCart, promo?.nilai]) // REMOVED showToast and formatCurrency dependencies
 
-  // Submit voucher selection
+  // Show confirmation modal before submit
   const handleSubmitSelection = async () => {
-    console.log('🎯 [VOUCHER_SUBMIT] Starting voucher submission process...')
+    console.log('🎯 [VOUCHER_SUBMIT] Validating before showing confirmation...')
     
     if (cart.length === 0) {
       console.warn('⚠️ [VOUCHER_SUBMIT] No items in cart')
@@ -810,9 +812,15 @@ const canAddItem = (item: SellableItem): boolean => {
       return
     }
 
-    console.log('✅ [VOUCHER_SUBMIT] All validation passed')
+    console.log('✅ [VOUCHER_SUBMIT] All validation passed - showing confirmation modal')
+    setShowConfirmModal(true)
+  }
 
+  // Actual submission after confirmation
+  const handleConfirmedSubmit = async () => {
+    console.log('🎯 [VOUCHER_SUBMIT] Starting confirmed voucher submission...')
     setIsSubmitting(true)
+    setShowConfirmModal(false)
     
     try {
       // Prepare submission data
@@ -1735,6 +1743,190 @@ const canAddItem = (item: SellableItem): boolean => {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal - Custom Implementation */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => !isSubmitting && setShowConfirmModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg shadow-xl transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3">
+                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Confirm Voucher Submission</h2>
+                </div>
+                {!isSubmitting && (
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <p className="text-gray-700 dark:text-gray-300 mb-6">
+                  Please review your voucher submission details before confirming:
+                </p>
+
+                {/* Voucher Details */}
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6 space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Voucher Type</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {voucherTypeOptions.find(v => v.value === selectedVoucherType)?.label || selectedVoucherType}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Branch</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {branches.find(b => b.value === selectedBranch)?.label || selectedBranch}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Sales Person</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {salesPersons.find(s => s.name === selectedSalesPerson)?.name || selectedSalesPerson}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {erpUsers.find(u => u.name === selectedUser)?.full_name || selectedUser}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selected Items */}
+                <div className="mb-6">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                    Selected Items ({cart.length})
+                  </h3>
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-900">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Item
+                            </th>
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Qty
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Price
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Subtotal
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {cart.map((item, index) => (
+                            <tr key={index}>
+                              <td className="px-4 py-3">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {item.item.item_name}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {item.item.item_code}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center text-sm text-gray-900 dark:text-white">
+                                {item.quantity} {item.item.stock_uom}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
+                                {formatCurrency(item.item.price)}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                                {formatCurrency(item.subtotal)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-700 dark:text-gray-300">Total Items:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{cart.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-700 dark:text-gray-300">Total Value:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(cartTotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-700 dark:text-gray-300">Voucher Value:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(promo?.nilai || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-blue-200 dark:border-blue-700">
+                      <span className="text-gray-700 dark:text-gray-300">Remaining:</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400">
+                        {formatCurrency(remainingVoucherValue)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer */}
+              <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={isSubmitting}
+                  className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Review Again
+                </button>
+                <button
+                  onClick={handleConfirmedSubmit}
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Yes, Submit Voucher</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthGuard>
   )
 }
