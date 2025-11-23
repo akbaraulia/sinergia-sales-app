@@ -16,36 +16,17 @@ export class SessionManager {
   
   /**
    * Check if current session is valid based on timestamp
+   * DISABLED AUTO-LOGOUT - Always returns true if session data exists
    */
-  static isSessionValid(): boolean | 'NEEDS_COOKIE_CHECK' {
+  static isSessionValid(): boolean {
     try {
       const sessionData = this.getSessionData()
       if (!sessionData) return false
       
-      const now = Date.now()
-      const sessionAge = now - sessionData.timestamp
-      const timeSinceLastCheck = now - sessionData.lastCheck
-      
-      // Session expired if older than timeout
-      if (sessionAge > SESSION_CONFIG.TIMEOUT_MS) {
-        console.warn('⚠️ [SESSION] Session expired:', {
-          ageMinutes: Math.floor(sessionAge / 60000),
-          timeoutMinutes: SESSION_CONFIG.TIMEOUT_MINUTES
-        })
-        return false
-      }
-      
-      // Need to check cookies if it's been too long since last check
-      if (timeSinceLastCheck > SESSION_CONFIG.AUTH_CHECK_INTERVAL_MS) {
-        console.log('🔍 [SESSION] Time for cookie health check:', {
-          minutesSinceLastCheck: Math.floor(timeSinceLastCheck / 60000),
-          checkIntervalMinutes: SESSION_CONFIG.AUTH_CHECK_INTERVAL_MINUTES
-        })
-        // This will trigger a cookie health check
-        return 'NEEDS_COOKIE_CHECK'
-      }
-      
+      // JUST CHECK IF DATA EXISTS - NO EXPIRY ENFORCEMENT!
+      console.log('✅ [SESSION] Session data exists (no expiry check)')
       return true
+      
     } catch (error) {
       console.error('❌ [SESSION] Error checking session validity:', error)
       return false

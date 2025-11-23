@@ -22,9 +22,9 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
     
     const validateSession = async () => {
       try {
-        console.log('🛡️ [AuthGuard] Starting session validation...')
+        console.log('🛡️ [AuthGuard] Quick auth check (NO AUTO-LOGOUT)...')
         
-        // First check localStorage auth state
+        // ONLY check localStorage auth state - NO SESSION EXPIRY CHECK
         if (!isAuthenticated || !user) {
           console.log('🛡️ [AuthGuard] No local auth state, redirecting to login')
           if (isMounted) {
@@ -34,38 +34,7 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
           return
         }
         
-        // Check session validity and cookie health
-        const sessionCheck = SessionManager.isSessionValid()
-        
-        if (sessionCheck === false) {
-          console.warn('🛡️ [AuthGuard] Session expired, logging out')
-          if (isMounted) {
-            SessionManager.clearSession()
-            await logout()
-            setAuthStatus('invalid')
-            router.push('/login')
-          }
-          return
-        }
-        
-        if (sessionCheck === 'NEEDS_COOKIE_CHECK') {
-          console.log('🛡️ [AuthGuard] Performing cookie health check...')
-          
-          const cookieValid = await SessionManager.validateCookies()
-          
-          if (!cookieValid) {
-            console.warn('🛡️ [AuthGuard] Cookies expired but localStorage has auth state')
-            if (isMounted) {
-              SessionManager.clearSession()
-              await logout()
-              setAuthStatus('invalid')
-              router.push('/login')
-            }
-            return
-          }
-        }
-        
-        // Check permissions if required
+        // Check permissions if required (NO COOKIE/SESSION VALIDATION)
         if (requiredPermissions.length > 0) {
           const hasRequiredPermissions = requiredPermissions.every(permission => 
             hasPermission(permission)
@@ -81,18 +50,19 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
           }
         }
         
-        // All checks passed
-        console.log('✅ [AuthGuard] Session validation successful')
+        // All checks passed - NO SESSION EXPIRY ENFORCEMENT
+        console.log('✅ [AuthGuard] Auth state valid (no auto-logout)')
         if (isMounted) {
           setAuthStatus('valid')
           setIsValidating(false)
         }
         
       } catch (error) {
-        console.error('❌ [AuthGuard] Session validation error:', error)
+        console.error('❌ [AuthGuard] Auth check error:', error)
+        // DON'T auto-logout on error
         if (isMounted) {
-          setAuthStatus('invalid')
-          router.push('/login')
+          setAuthStatus('valid')
+          setIsValidating(false)
         }
       }
     }
@@ -102,7 +72,7 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
     return () => {
       isMounted = false
     }
-  }, [isAuthenticated, user, hasPermission, requiredPermissions, router, logout])
+  }, [isAuthenticated, user, hasPermission, requiredPermissions, router])
 
   // Show loading while validating
   if (isValidating || authStatus === 'checking') {
