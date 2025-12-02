@@ -1,0 +1,634 @@
+'use client'
+
+import { useState } from 'react'
+import AuthGuard from '@/components/common/AuthGuard'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { useAuthStore } from '@/store/authStore'
+import { useToast } from '@/components/common/ToastProvider'
+
+interface Customer {
+  name: string
+  customer_name: string
+  customer_id?: string
+  customer_group?: string
+  territory?: string
+  custom_branch?: string
+  custom_rayon?: string
+  mobile_no?: string
+  email_id?: string
+  custom_user?: string | null // Link to User doctype
+  custom_status?: string
+}
+
+interface SearchFilters {
+  customer_id: string
+  customer_name: string
+  branch: string
+  rayon: string
+}
+
+export default function CustomerActivationPage() {
+  const { user } = useAuthStore()
+  const { showToast } = useToast()
+
+  // Search & Filter state
+  const [filters, setFilters] = useState<SearchFilters>({
+    customer_id: '',
+    customer_name: '',
+    branch: '',
+    rayon: ''
+  })
+  const [searchLoading, setSearchLoading] = useState(false)
+  
+  // Results state
+  const [searchResults, setSearchResults] = useState<Customer[]>([])
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [showList, setShowList] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  
+  // Activation form state
+  const [activationData, setActivationData] = useState({
+    email: '',
+    mobile: '',
+    password: '',
+    confirmPassword: ''
+  })
+  const [activating, setActivating] = useState(false)
+
+  // Handle filter change
+  const handleFilterChange = (key: keyof SearchFilters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Handle search
+  const handleSearch = async () => {
+    // Validation: at least one filter required
+    const hasFilter = Object.values(filters).some(v => v.trim().length > 0)
+    if (!hasFilter) {
+      showToast.warning('Filter required', 'Please enter at least one search criteria')
+      return
+    }
+
+    setSearchLoading(true)
+    setShowList(false)
+    setShowForm(false)
+    setSelectedCustomer(null)
+
+    try {
+      // Build query params
+      const params = new URLSearchParams()
+      if (filters.customer_id.trim()) params.append('customer_id', filters.customer_id.trim())
+      if (filters.customer_name.trim()) params.append('name', filters.customer_name.trim())
+      if (filters.branch.trim()) params.append('branch', filters.branch.trim())
+      if (filters.rayon.trim()) params.append('rayon', filters.rayon.trim())
+
+      const response = await fetch(`/api/customers/activation/search?${params.toString()}`)
+      const data = await response.json()
+
+      if (data.success && data.customers) {
+        if (data.customers.length === 0) {
+          showToast.info('No results', 'No customers found with the given criteria')
+          setSearchResults([])
+          setShowList(false)
+          setShowForm(false)
+        } else if (data.customers.length === 1 && filters.customer_id.trim()) {
+          // Direct to form if customer_id is unique
+          setSelectedCustomer(data.customers[0])
+          setActivationData({
+            email: data.customers[0].email_id || '',
+            mobile: data.customers[0].mobile_no || '',
+            password: '',
+            confirmPassword: ''
+          })
+          setShowForm(true)
+          setShowList(false)
+          showToast.success('Customer found', `Found: ${data.customers[0].customer_name}`)
+        } else {
+          // Show list for multiple results
+          setSearchResults(data.customers)
+          setShowList(true)
+          setShowForm(false)
+          showToast.success('Search complete', `Found ${data.customers.length} customers`)
+        }
+      } else {
+        showToast.error('Search failed', data.error || 'Failed to search customers')
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+      showToast.error('Search failed', error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  // Handle select customer from list
+  const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setActivationData({
+      email: customer.email_id || '',
+      mobile: customer.mobile_no || '',
+      password: '',
+      confirmPassword: ''
+    })
+    setShowList(false)
+    setShowForm(true)
+  }
+
+  // Handle activation submit
+  const handleActivate = async () => {
+    if (!selectedCustomer) return
+
+    // Validation
+    if (!activationData.email || !activationData.mobile) {
+      showToast.warning('Missing data', 'Email and Mobile are required')
+      return
+    }
+    if (!activationData.password || activationData.password.length < 6) {
+      showToast.warning('Invalid password', 'Password must be at least 6 characters')
+      return
+    }
+    if (activationData.password !== activationData.confirmPassword) {
+      showToast.warning('Password mismatch', 'Passwords do not match')
+      return
+    }
+
+    setActivating(true)
+
+    try {
+      const response = await fetch('/api/customers/activation/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: selectedCustomer.name,
+          email: activationData.email,
+          mobile: activationData.mobile,
+          password: activationData.password
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        showToast.success('Activation successful', `Customer ${selectedCustomer.customer_name} activated successfully`)
+        handleReset()
+      } else {
+        showToast.error('Activation failed', data.error || 'Failed to activate customer')
+      }
+    } catch (error) {
+      console.error('Activation error:', error)
+      showToast.error('Activation failed', error instanceof Error ? error.message : 'Unknown error')
+    } finally {
+      setActivating(false)
+    }
+  }
+
+  // Handle reset
+  const handleReset = () => {
+    setFilters({
+      customer_id: '',
+      customer_name: '',
+      branch: '',
+      rayon: ''
+    })
+    setSearchResults([])
+    setSelectedCustomer(null)
+    setShowList(false)
+    setShowForm(false)
+    setActivationData({
+      email: '',
+      mobile: '',
+      password: '',
+      confirmPassword: ''
+    })
+  }
+
+  // Handle back to list
+  const handleBackToList = () => {
+    setSelectedCustomer(null)
+    setShowForm(false)
+    setShowList(true)
+  }
+
+  // Check permission (admin or sales)
+  const hasAccess = user?.permissions.includes('admin') || user?.permissions.includes('sales')
+
+  if (!hasAccess) {
+    return (
+      <AuthGuard>
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[60vh] p-4">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-jet-800 dark:text-white mb-2">
+                Access Restricted
+              </h2>
+              <p className="text-jet-600 dark:text-gray-300">
+                You don't have permission to access customer activation.
+              </p>
+            </div>
+          </div>
+        </DashboardLayout>
+      </AuthGuard>
+    )
+  }
+
+  return (
+    <AuthGuard>
+      <DashboardLayout>
+        <div className="min-h-screen bg-gradient-to-br from-isabelline via-white to-champagne-50 dark:from-dark-bg dark:via-dark-surface dark:to-jet-800">
+          {/* Header */}
+          <div className="sticky top-0 z-50 bg-gradient-to-r from-asparagus to-asparagus-700 dark:from-asparagus-600 dark:to-asparagus-800 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-white dark:bg-dark-surface rounded-lg shadow-md">
+                    <svg className="h-6 w-6 text-asparagus-600 dark:text-asparagus-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Customer Activation</h1>
+                    <p className="text-sm text-asparagus-100 dark:text-asparagus-200">
+                      Activate mobile app access for customers
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="space-y-6">
+              {/* Search Filters */}
+              <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg p-6 border border-champagne-200 dark:border-dark-border">
+                <h2 className="text-lg font-semibold text-jet-800 dark:text-white mb-4 flex items-center">
+                  <svg className="h-5 w-5 mr-2 text-asparagus-600 dark:text-asparagus-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Search Customer
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Customer ID */}
+                  <div>
+                    <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                      Customer ID
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.customer_id}
+                      onChange={(e) => handleFilterChange('customer_id', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      placeholder="e.g., CUST-00001"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                               focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Customer Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                      Customer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.customer_name}
+                      onChange={(e) => handleFilterChange('customer_name', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      placeholder="e.g., Salon ABC"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                               focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Branch */}
+                  <div>
+                    <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                      Branch
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.branch}
+                      onChange={(e) => handleFilterChange('branch', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      placeholder="e.g., JKT"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                               focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Rayon */}
+                  <div>
+                    <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                      Rayon
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.rayon}
+                      onChange={(e) => handleFilterChange('rayon', e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      placeholder="e.g., R01"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                               focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                    className="px-4 py-2 bg-asparagus-600 text-white rounded-md hover:bg-asparagus-700 
+                             disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center"
+                  >
+                    {searchLoading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Search
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    disabled={searchLoading}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 
+                             disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Results List */}
+              {showList && searchResults.length > 0 && (
+                <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg border border-champagne-200 dark:border-dark-border overflow-hidden">
+                  <div className="p-4 bg-asparagus-50 dark:bg-gray-700 border-b border-champagne-200 dark:border-dark-border">
+                    <h2 className="text-lg font-semibold text-jet-800 dark:text-white">
+                      Search Results ({searchResults.length})
+                    </h2>
+                    <p className="text-sm text-jet-600 dark:text-gray-400">
+                      Select a customer to activate
+                    </p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Customer ID
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Customer Name
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Branch
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Rayon
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-dark-surface divide-y divide-gray-200 dark:divide-gray-700">
+                        {searchResults.map((customer, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-mono">
+                              {customer.customer_id || customer.name}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                              {customer.customer_name}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                              {customer.custom_branch || '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                              {customer.custom_rayon || '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {customer.custom_user ? (
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                  Activated
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                  Not Activated
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <button
+                                onClick={() => handleSelectCustomer(customer)}
+                                className="text-asparagus-600 hover:text-asparagus-700 dark:text-asparagus-400 dark:hover:text-asparagus-300 font-medium"
+                              >
+                                {customer.custom_user ? 'View/Edit' : 'Activate'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Activation Form */}
+              {showForm && selectedCustomer && (
+                <div className="bg-white dark:bg-dark-surface rounded-lg shadow-lg p-6 border border-champagne-200 dark:border-dark-border">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-jet-800 dark:text-white flex items-center">
+                      <svg className="h-5 w-5 mr-2 text-asparagus-600 dark:text-asparagus-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Customer Activation Form
+                    </h2>
+                    {searchResults.length > 0 && (
+                      <button
+                        onClick={handleBackToList}
+                        className="text-sm text-asparagus-600 hover:text-asparagus-700 dark:text-asparagus-400 dark:hover:text-asparagus-300 flex items-center"
+                      >
+                        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to List
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Customer Info */}
+                  <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <h3 className="text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">Customer Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">Customer ID:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white font-medium">{selectedCustomer.customer_id || selectedCustomer.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">Customer Name:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white font-medium">{selectedCustomer.customer_name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">Branch:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white font-medium">{selectedCustomer.custom_branch || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">Rayon:</span>
+                        <span className="ml-2 text-gray-900 dark:text-white font-medium">{selectedCustomer.custom_rayon || '-'}</span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="text-gray-600 dark:text-gray-400">Current Status:</span>
+                        {selectedCustomer.custom_user ? (
+                          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Already Activated (User: {selectedCustomer.custom_user})
+                          </span>
+                        ) : (
+                          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            Not Activated
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Activation Form Fields */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Email */}
+                      <div>
+                        <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                          Email <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={activationData.email}
+                          onChange={(e) => setActivationData(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="customer@example.com"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                   focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Mobile */}
+                      <div>
+                        <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                          Mobile Number <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={activationData.mobile}
+                          onChange={(e) => setActivationData(prev => ({ ...prev, mobile: e.target.value }))}
+                          placeholder="08123456789"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                   focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Password */}
+                      <div>
+                        <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                          Password <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={activationData.password}
+                          onChange={(e) => setActivationData(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="Minimum 6 characters"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                   focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div>
+                        <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
+                          Confirm Password <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={activationData.confirmPassword}
+                          onChange={(e) => setActivationData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          placeholder="Re-enter password"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                   focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Info Note */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        ℹ️ This will create a new mobile app user account and link it to this customer. 
+                        The customer will be able to login with the provided email/mobile and password.
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={handleActivate}
+                        disabled={activating}
+                        className="flex-1 px-6 py-3 bg-asparagus-600 text-white rounded-md hover:bg-asparagus-700 
+                                 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium
+                                 flex items-center justify-center"
+                      >
+                        {activating ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Activating...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {selectedCustomer.custom_user ? 'Update Activation' : 'Activate Customer'}
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleReset}
+                        disabled={activating}
+                        className="px-6 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 
+                                 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    </AuthGuard>
+  )
+}

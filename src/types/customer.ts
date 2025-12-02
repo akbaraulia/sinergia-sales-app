@@ -24,7 +24,16 @@ export interface Customer {
   custom_nama_salontoko?: string | null
   custom_lifetime_omset?: number
   calculated_loyalty_points?: number
+  custom_user?: string | null // Link to User doctype (mobile app user)
   sales_team?: SalesTeamMember[]
+  activation_status?: string // "Activated" | "Pending Activation (Dummy)" | "Not Registered"
+  linked_user_account?: {
+    user_id: string
+    full_name: string
+    is_enabled: number
+  } | null
+  custom_login_email?: string | null // Email for activation (can be edited)
+  is_converted?: number | null // 1 = activated/converted, 0/null = not converted
 }
 
 export interface CustomerFilters {

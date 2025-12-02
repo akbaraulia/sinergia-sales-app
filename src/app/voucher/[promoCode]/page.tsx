@@ -128,7 +128,17 @@ export default function VoucherFormPage() {
   // Calculate totals
   const cartTotal = cart.reduce((sum, item) => sum + item.subtotal, 0)
   const remainingVoucherValue = promo ? Math.max(0, promo.nilai - cartTotal) : 0
-  const isVoucherExceeded = cartTotal > (promo?.nilai || 0)
+  
+  // Validation tolerances:
+  // - Upper limit: Can exceed voucher value by max 20,000 (tolerance)
+  // - Lower limit: Must be at least (voucher value - 100,000)
+  const UPPER_TOLERANCE = 25000 // Can go 25k above voucher value
+  const LOWER_TOLERANCE = 100000 // Must be at least 100k below voucher value
+  const maxAllowedTotal = (promo?.nilai || 0) + UPPER_TOLERANCE
+  const minRequiredTotal = (promo?.nilai || 0) - LOWER_TOLERANCE
+  
+  const isVoucherExceeded = cartTotal > maxAllowedTotal
+  const isBelowMinimum = cartTotal < minRequiredTotal && cartTotal > 0
 
   // Generate image URL from ERP
   const getImageUrl = (imagePath?: string) => {
@@ -652,19 +662,22 @@ const canAddItem = (item: SellableItem): boolean => {
     const newSubtotal = item.price * quantity
     const potentialTotal = currentCartTotal + newSubtotal
     
-    // Check if adding this item would exceed voucher value - BEFORE any state updates
-    if (potentialTotal > (promo?.nilai || 0)) {
-      const maxQuantity = Math.floor(currentRemainingValue / item.price)
+    // Check if adding this item would exceed voucher value + tolerance (25k) - BEFORE any state updates
+    const UPPER_TOLERANCE = 25000
+    const maxAllowed = (promo?.nilai || 0) + UPPER_TOLERANCE
+    if (potentialTotal > maxAllowed) {
+      const maxRemaining = maxAllowed - currentCartTotal
+      const maxQuantity = Math.floor(maxRemaining / item.price)
       if (maxQuantity > 0) {
         showToast.warning(
           'Quantity adjusted', 
-          `Maximum quantity for this item: ${maxQuantity} (to stay within voucher limit)`
+          `Maximum quantity for this item: ${maxQuantity} (voucher limit + 20k tolerance)`
         )
         quantity = maxQuantity
       } else {
         showToast.error(
           'Cannot add item', 
-          `This item would exceed your voucher value`
+          `This item would exceed voucher limit (max: ${formatCurrency(maxAllowed)})`
         )
         return
       }
@@ -748,12 +761,14 @@ const canAddItem = (item: SellableItem): boolean => {
         .reduce((sum, item) => sum + item.subtotal, 0)
       const potentialTotal = otherItemsTotal + newSubtotal
 
-      // Check voucher limit
-      if (potentialTotal > (promo?.nilai || 0)) {
-        const maxQuantity = Math.floor((promo?.nilai || 0) - otherItemsTotal) / cartItem.item.price
+      // Check voucher limit + tolerance (25k)
+      const UPPER_TOLERANCE = 25000
+      const maxAllowed = (promo?.nilai || 0) + UPPER_TOLERANCE
+      if (potentialTotal > maxAllowed) {
+        const maxQuantity = Math.floor((maxAllowed - otherItemsTotal) / cartItem.item.price)
         showToast.warning(
           'Quantity adjusted', 
-          `Maximum quantity: ${Math.max(1, Math.floor(maxQuantity))} (voucher limit: ${formatCurrency(promo?.nilai || 0)})`
+          `Maximum quantity: ${Math.max(1, Math.floor(maxQuantity))} (voucher limit + 20k tolerance: ${formatCurrency(maxAllowed)})`
         )
         newQuantity = Math.max(1, Math.floor(maxQuantity))
       }
@@ -777,8 +792,16 @@ const canAddItem = (item: SellableItem): boolean => {
     }
 
     if (isVoucherExceeded) {
-      console.warn('⚠️ [VOUCHER_SUBMIT] Voucher limit exceeded:', { cartTotal, voucherValue: promo?.nilai })
-      showToast.error('Voucher limit exceeded', `Total cannot exceed ${formatCurrency(promo?.nilai || 0)}`)
+      const maxAllowed = (promo?.nilai || 0) + 25000
+      console.warn('⚠️ [VOUCHER_SUBMIT] Voucher limit exceeded:', { cartTotal, voucherValue: promo?.nilai, maxAllowed })
+      showToast.error('Voucher limit exceeded', `Total cannot exceed ${formatCurrency(maxAllowed)} (voucher + 25k tolerance)`)
+      return
+    }
+
+    if (isBelowMinimum) {
+      const minRequired = (promo?.nilai || 0) - 100000
+      console.warn('⚠️ [VOUCHER_SUBMIT] Below minimum value:', { cartTotal, voucherValue: promo?.nilai, minRequired })
+      showToast.error('Below minimum value', `Total must be at least ${formatCurrency(minRequired)} (voucher - 100k)`)
       return
     }
 
