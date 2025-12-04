@@ -24,12 +24,46 @@ export async function GET(request: Request) {
     
     console.log('🌐 [REPLENISHMENT] Calling:', erpUrl)
     
+    // Get API credentials from environment
+    const apiKey = process.env.ERPNEXT_API_KEY || process.env.ACTIVATION_USER_API_KEY
+    const apiSecret = process.env.ERPNEXT_API_SECRET || process.env.ACTIVATION_USER_API_SECRET
+    
+    // Alternative: use email/password if API key not available
+    const email = process.env.ACTIVATION_USER_EMAIL
+    const password = process.env.ACTIVATION_USER_PASSWORD
+    
+    console.log('🔑 [REPLENISHMENT] Auth check:', {
+      hasApiKey: !!apiKey,
+      hasApiSecret: !!apiSecret,
+      hasEmail: !!email,
+      hasPassword: !!password
+    })
+    
+    const headers: HeadersInit = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    }
+    
+    // Use API token if both key and secret are available
+    if (apiKey && apiSecret) {
+      headers['Authorization'] = `token ${apiKey}:${apiSecret}`
+      console.log('🔑 [REPLENISHMENT] Using API token authentication')
+    } else if (email && password) {
+      // Use basic auth as fallback
+      const basicAuth = Buffer.from(`${email}:${password}`).toString('base64')
+      headers['Authorization'] = `Basic ${basicAuth}`
+      console.log('🔑 [REPLENISHMENT] Using Basic authentication')
+    } else {
+      console.error('❌ [REPLENISHMENT] Missing ERPNext credentials')
+      console.error('Please set either:')
+      console.error('  1. ERPNEXT_API_KEY + ERPNEXT_API_SECRET')
+      console.error('  2. ACTIVATION_USER_EMAIL + ACTIVATION_USER_PASSWORD')
+      throw new Error('ERPNext credentials not configured')
+    }
+    
     const response = await fetch(erpUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -40,20 +74,47 @@ export async function GET(request: Request) {
     const queryTime = Date.now() - startTime
 
     console.log(`✅ [REPLENISHMENT] ERP response in ${queryTime}ms`)
+    console.log('📦 [REPLENISHMENT] Full ERP Response Structure:', JSON.stringify(erpResult, null, 2))
+    console.log('🔍 [REPLENISHMENT] Response keys:', Object.keys(erpResult))
+    
+    if (erpResult.data) {
+      console.log('📦 [REPLENISHMENT] erpResult.data keys:', Object.keys(erpResult.data))
+      console.log('📦 [REPLENISHMENT] erpResult.data type:', Array.isArray(erpResult.data) ? 'Array' : typeof erpResult.data)
+      
+      if (erpResult.data.data) {
+        console.log('📦 [REPLENISHMENT] erpResult.data.data type:', Array.isArray(erpResult.data.data) ? 'Array' : typeof erpResult.data.data)
+        console.log('📦 [REPLENISHMENT] erpResult.data.data sample (first item):', JSON.stringify(erpResult.data.data[0], null, 2))
+      }
+    }
+    
+    if (erpResult.message) {
+      console.log('📦 [REPLENISHMENT] erpResult.message type:', Array.isArray(erpResult.message) ? 'Array' : typeof erpResult.message)
+    }
 
     // The server script returns data ALREADY PIVOTED (one row per item with warehouses array)
     let pivotedData: ReplenishmentReportRow[] = []
     
     // Handle different possible response structures
     if (erpResult.data?.data && Array.isArray(erpResult.data.data)) {
+      console.log('✅ [REPLENISHMENT] Using erpResult.data.data path')
       pivotedData = erpResult.data.data
     } else if (erpResult.message && Array.isArray(erpResult.message)) {
+      console.log('✅ [REPLENISHMENT] Using erpResult.message path')
       pivotedData = erpResult.message
     } else if (erpResult.data && Array.isArray(erpResult.data)) {
+      console.log('✅ [REPLENISHMENT] Using erpResult.data path')
       pivotedData = erpResult.data
     } else if (Array.isArray(erpResult)) {
+      console.log('✅ [REPLENISHMENT] Using erpResult (direct array) path')
       pivotedData = erpResult
     } else {
+      console.error('❌ [REPLENISHMENT] None of the expected paths matched!')
+      console.error('Expected one of:')
+      console.error('  - erpResult.data.data as Array')
+      console.error('  - erpResult.message as Array')
+      console.error('  - erpResult.data as Array')
+      console.error('  - erpResult as Array')
+      console.error('Got:', JSON.stringify(erpResult, null, 2))
       throw new Error('Unexpected response structure from ERPNext server script')
     }
 
