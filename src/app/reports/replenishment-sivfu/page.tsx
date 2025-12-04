@@ -19,6 +19,7 @@ interface SIVFURow {
   Nas_Total_Stock: number
   Nas_Total_Replenish: number
   Nas_Total_DOI: number
+  Nas_Avg_Flow: number
   Nas_Sales_M0: number
   Nas_Sales_M1: number
   Nas_Sales_M2: number
@@ -136,29 +137,30 @@ export default function ReplenishmentSIVFUPage() {
 
     // Build CSV header
     let csvContent = 'Kode Item,Nama Item,HPP,'
-    csvContent += 'Total Stock,Total Replenish,Total DOI,'
+    csvContent += 'Total Stock,Total Replenish,Total DOI,Total Avg Flow,'
     csvContent += `Sales ${monthLabels.m0},Sales ${monthLabels.m1},Sales ${monthLabels.m2},Sales ${monthLabels.m3},`
     csvContent += `Lain ${monthLabels.m0},Lain ${monthLabels.m1},Lain ${monthLabels.m2},Lain ${monthLabels.m3},`
     
     // Add branch columns
     BRANCHES.forEach(branch => {
       csvContent += `${branch} Stock,${branch} Sales M0,${branch} Sales M1,${branch} Sales M2,${branch} Sales M3,`
-      csvContent += `${branch} Lain M0,${branch} Lain M1,${branch} Lain M2,${branch} Lain M3,${branch} Replenish,${branch} DOI,`
+      csvContent += `${branch} Lain M0,${branch} Lain M1,${branch} Lain M2,${branch} Lain M3,${branch} Replenish,${branch} DOI,${branch} Avg Flow,`
     })
     csvContent += '\n'
 
     // Add data rows
     data.forEach(row => {
       csvContent += `"${row.kode_item}","${row.nama_item}",${row.hpp_ref || 0},`
-      csvContent += `${row.Nas_Total_Stock},${row.Nas_Total_Replenish},${row.Nas_Total_DOI},`
+      csvContent += `${row.Nas_Total_Stock},${row.Nas_Total_Replenish},${row.Nas_Total_DOI},${row.Nas_Avg_Flow || 0},`
       csvContent += `${row.Nas_Sales_M0},${row.Nas_Sales_M1},${row.Nas_Sales_M2},${row.Nas_Sales_M3},`
       csvContent += `${row.Nas_Lain_M0},${row.Nas_Lain_M1},${row.Nas_Lain_M2},${row.Nas_Lain_M3},`
       
       BRANCHES.forEach(branch => {
+        const avgFlow = ((row[`${branch}_S_M1`] || 0) + (row[`${branch}_S_M2`] || 0) + (row[`${branch}_S_M3`] || 0) + (row[`${branch}_L_M1`] || 0) + (row[`${branch}_L_M2`] || 0) + (row[`${branch}_L_M3`] || 0)) / 3
         csvContent += `${row[`${branch}_Stock`] || 0},`
         csvContent += `${row[`${branch}_S_M0`] || 0},${row[`${branch}_S_M1`] || 0},${row[`${branch}_S_M2`] || 0},${row[`${branch}_S_M3`] || 0},`
         csvContent += `${row[`${branch}_L_M0`] || 0},${row[`${branch}_L_M1`] || 0},${row[`${branch}_L_M2`] || 0},${row[`${branch}_L_M3`] || 0},`
-        csvContent += `${row[`${branch}_Replenish`] || 0},${row[`${branch}_DOI`] || 0},`
+        csvContent += `${row[`${branch}_Replenish`] || 0},${row[`${branch}_DOI`] || 0},${avgFlow.toFixed(1)},`
       })
       csvContent += '\n'
     })
@@ -280,13 +282,13 @@ export default function ReplenishmentSIVFUPage() {
                     </th>
                     
                     {/* National Total Header */}
-                    <th colSpan={11} className="px-3 py-2 text-center text-xs font-bold text-white bg-red-600 dark:bg-red-700 uppercase border-l-2 border-red-800">
+                    <th colSpan={12} className="px-3 py-2 text-center text-xs font-bold text-white bg-red-600 dark:bg-red-700 uppercase border-l-2 border-red-800">
                       📊 TOTAL NASIONAL
                     </th>
                     
                     {/* Branch Headers */}
                     {BRANCHES.map(branch => (
-                      <th key={branch} colSpan={11} className="px-3 py-2 text-center text-xs font-bold text-white bg-asparagus-600 dark:bg-asparagus-700 uppercase border-l-2 border-asparagus-800">
+                      <th key={branch} colSpan={12} className="px-3 py-2 text-center text-xs font-bold text-white bg-asparagus-600 dark:bg-asparagus-700 uppercase border-l-2 border-asparagus-800">
                         {branch}
                       </th>
                     ))}
@@ -302,6 +304,7 @@ export default function ReplenishmentSIVFUPage() {
                     <th className="px-2 py-2 text-xs text-gray-700 dark:text-gray-300 text-center border-r dark:border-gray-600">Stock</th>
                     <th className="px-2 py-2 text-xs text-gray-700 dark:text-gray-300 text-center border-r dark:border-gray-600">Replen</th>
                     <th className="px-2 py-2 text-xs text-gray-700 dark:text-gray-300 text-center border-r dark:border-gray-600">DOI</th>
+                    <th className="px-2 py-2 text-xs text-gray-700 dark:text-gray-300 text-center border-r dark:border-gray-600">Avg Flow</th>
                     <th className="px-2 py-2 text-xs text-blue-700 dark:text-blue-400 text-center border-r dark:border-gray-600">S-{monthLabels.m0}</th>
                     <th className="px-2 py-2 text-xs text-blue-700 dark:text-blue-400 text-center border-r dark:border-gray-600">S-{monthLabels.m1}</th>
                     <th className="px-2 py-2 text-xs text-blue-700 dark:text-blue-400 text-center border-r dark:border-gray-600">S-{monthLabels.m2}</th>
@@ -324,7 +327,8 @@ export default function ReplenishmentSIVFUPage() {
                         <th className="px-2 py-2 text-xs text-purple-700 dark:text-purple-400 text-center border-r dark:border-gray-600">L-M2</th>
                         <th className="px-2 py-2 text-xs text-purple-700 dark:text-purple-400 text-center border-r dark:border-gray-600">L-M3</th>
                         <th className="px-2 py-2 text-xs text-green-700 dark:text-green-400 text-center border-r dark:border-gray-600">Replen</th>
-                        <th className="px-2 py-2 text-xs text-orange-700 dark:text-orange-400 text-center border-r-2 border-asparagus-300 dark:border-asparagus-600">DOI</th>
+                        <th className="px-2 py-2 text-xs text-orange-700 dark:text-orange-400 text-center border-r dark:border-gray-600">DOI</th>
+                        <th className="px-2 py-2 text-xs text-gray-700 dark:text-gray-300 text-center border-r-2 border-asparagus-300 dark:border-asparagus-600">Avg Flow</th>
                       </Fragment>
                     ))}
                   </tr>
@@ -359,6 +363,9 @@ export default function ReplenishmentSIVFUPage() {
                       }`}>
                         {formatNumber(row.Nas_Total_DOI)}
                       </td>
+                      <td className="px-2 py-2 text-sm text-right font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-700">
+                        {formatNumber(row.Nas_Avg_Flow)}
+                      </td>
                       <td className="px-2 py-2 text-sm text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
                         {formatNumber(row.Nas_Sales_M0)}
                       </td>
@@ -384,7 +391,7 @@ export default function ReplenishmentSIVFUPage() {
                         {formatNumber(row.Nas_Lain_M3)}
                       </td>
                       
-                      {/* Branch data (35 branches × 11 columns) */}
+                      {/* Branch data (35 branches × 12 columns) */}
                       {BRANCHES.map(branch => {
                         const stock = row[`${branch}_Stock`] || 0
                         const replenish = row[`${branch}_Replenish`] || 0
@@ -397,6 +404,7 @@ export default function ReplenishmentSIVFUPage() {
                         const lM1 = row[`${branch}_L_M1`] || 0
                         const lM2 = row[`${branch}_L_M2`] || 0
                         const lM3 = row[`${branch}_L_M3`] || 0
+                        const avgFlow = (sM1 + sM2 + sM3 + lM1 + lM2 + lM3) / 3
                         
                         return (
                           <Fragment key={`${branch}-${idx}`}>
@@ -432,12 +440,15 @@ export default function ReplenishmentSIVFUPage() {
                             }`}>
                               {formatNumber(replenish)}
                             </td>
-                            <td className={`px-2 py-2 text-sm text-right font-bold border-r-2 border-asparagus-300 dark:border-asparagus-600 ${
+                            <td className={`px-2 py-2 text-sm text-right font-bold border-r dark:border-gray-700 ${
                               doi < 30 ? 'text-red-600 dark:text-red-400' :
                               doi > 90 ? 'text-orange-600 dark:text-orange-400' :
                               'text-green-600 dark:text-green-400'
                             }`}>
                               {formatNumber(doi)}
+                            </td>
+                            <td className="px-2 py-2 text-sm text-right font-semibold text-gray-700 dark:text-gray-300 border-r-2 border-asparagus-300 dark:border-asparagus-600">
+                              {formatNumber(avgFlow)}
                             </td>
                           </Fragment>
                         )

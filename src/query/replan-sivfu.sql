@@ -19,7 +19,6 @@ SELECT
     -- =========================================================================
     -- 34 BRANCH PIVOT (FULL LIST)
     -- =========================================================================
-gu
     -- 1. JKT
     SUM(CASE WHEN fd.branch_id='JKT' THEN fd.current_qty ELSE 0 END) AS JKT_Stock,
     SUM(CASE WHEN fd.branch_id='JKT' THEN fd.replenishment_qty ELSE 0 END) AS JKT_Replenish,

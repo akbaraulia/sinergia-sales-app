@@ -160,6 +160,14 @@ export default function VoucherFormPage() {
   return Math.max(0, branchStock)
 }
 
+  // Get REMAINING stock after considering items in cart
+  const getRemainingStock = (item: SellableItem, branch: string): number => {
+    const totalStock = getStockForBranch(item, branch)
+    const cartItem = cart.find(ci => ci.item.item_code === item.item_code)
+    const qtyInCart = cartItem ? cartItem.quantity : 0
+    return Math.max(0, totalStock - qtyInCart)
+  }
+
   // Check if item can be added (has stock in selected branch)
 const canAddItem = (item: SellableItem): boolean => {
   if (!item.is_stock_item) return true // Service items always available
@@ -169,9 +177,9 @@ const canAddItem = (item: SellableItem): boolean => {
     return (item.stock_qty || 0) > 0
   }
   
-  // Check stock for selected branch
-  const branchStock = getStockForBranch(item, selectedBranch)
-  return branchStock > 0
+  // Check REMAINING stock for selected branch (after cart)
+  const remainingStock = getRemainingStock(item, selectedBranch)
+  return remainingStock > 0
 }
 
 
@@ -683,15 +691,22 @@ const canAddItem = (item: SellableItem): boolean => {
       }
     }
 
-    // Check stock quantity limit for selected branch - BEFORE any state updates
+    // Check REMAINING stock quantity limit for selected branch - BEFORE any state updates
     if (selectedBranch && item.is_stock_item) {
-      const availableStock = getStockForBranch(item, selectedBranch)
-      if (quantity > availableStock) {
+      const remainingStock = getRemainingStock(item, selectedBranch)
+      if (remainingStock === 0) {
+        showToast.error(
+          'Out of stock',
+          `This item is already in your cart and no more stock available in branch ${selectedBranch}`
+        )
+        return
+      }
+      if (quantity > remainingStock) {
         showToast.warning(
           'Stock limited',
-          `Only ${availableStock} items available in branch ${selectedBranch}`
+          `Only ${remainingStock} more items available in branch ${selectedBranch}`
         )
-        quantity = Math.min(quantity, availableStock)
+        quantity = Math.min(quantity, remainingStock)
       }
     }
 
@@ -706,13 +721,13 @@ const canAddItem = (item: SellableItem): boolean => {
         
         // Check stock limit again for total quantity
         if (selectedBranch && item.is_stock_item) {
-          const availableStock = getStockForBranch(item, selectedBranch)
-          if (newQuantity > availableStock) {
+          const totalStock = getStockForBranch(item, selectedBranch)
+          if (newQuantity > totalStock) {
             // Don't show toast here - would cause setState in render
             newCart[existingItemIndex] = {
               ...newCart[existingItemIndex],
-              quantity: availableStock,
-              subtotal: availableStock * item.price
+              quantity: totalStock,
+              subtotal: totalStock * item.price
             }
             return newCart
           }
@@ -755,6 +770,23 @@ const canAddItem = (item: SellableItem): boolean => {
       const cartItem = prevCart.find(item => item.item.item_code === itemCode)
       if (!cartItem) return prevCart
 
+      // Check stock limit FIRST if item is stock item and branch is selected
+      if (selectedBranch && cartItem.item.is_stock_item) {
+        const totalStock = getStockForBranch(cartItem.item, selectedBranch)
+        if (newQuantity > totalStock) {
+          showToast.warning(
+            'Stock limited',
+            `Only ${totalStock} items available in branch ${selectedBranch}. Maximum quantity reached.`
+          )
+          newQuantity = totalStock
+          // If no stock available, remove item
+          if (totalStock === 0) {
+            removeFromCart(itemCode)
+            return prevCart
+          }
+        }
+      }
+
       const newSubtotal = cartItem.item.price * newQuantity
       const otherItemsTotal = prevCart
         .filter(item => item.item.item_code !== itemCode)
@@ -779,7 +811,7 @@ const canAddItem = (item: SellableItem): boolean => {
           : item
       )
     })
-  }, [removeFromCart, promo?.nilai]) // REMOVED showToast and formatCurrency dependencies
+  }, [removeFromCart, promo?.nilai, selectedBranch]) // Added selectedBranch dependency
 
   // Show confirmation modal before submit
   const handleSubmitSelection = async () => {
@@ -1398,7 +1430,9 @@ const canAddItem = (item: SellableItem): boolean => {
     const maxQuantity = Math.floor(remainingVoucherValue / item.price)
     const hasStock = canAddItem(item)
     const branchStock = selectedBranch ? getStockForBranch(item, selectedBranch) : (item.stock_qty || 0)
-    const canAdd = remainingVoucherValue >= item.price && hasStock && selectedVoucherType && selectedBranch && selectedSalesPerson && selectedUser && branchStock > 0
+    const remainingStock = selectedBranch ? getRemainingStock(item, selectedBranch) : branchStock
+    const qtyInCart = cart.find(ci => ci.item.item_code === item.item_code)?.quantity || 0
+    const canAdd = remainingVoucherValue >= item.price && hasStock && selectedVoucherType && selectedBranch && selectedSalesPerson && selectedUser && remainingStock > 0
     
     return (
       <div key={item.item_code} className={`relative border border-gray-200 dark:border-dark-border rounded-lg p-4 hover:shadow-md transition-shadow ${!hasStock ? 'opacity-60' : ''}`}>
@@ -1446,16 +1480,23 @@ const canAddItem = (item: SellableItem): boolean => {
             <span className="text-xs text-gray-500 font-normal">/{item.stock_uom}</span>
           </div>
 
-          {/* Stock Information - MOVED BELOW PRICE */}
-          <div className="text-xs">
+          {/* Stock Information - REAL-TIME WITH CART */}
+          <div className="text-xs space-y-1">
             {selectedBranch ? (
-              <p className={`font-medium ${
-                branchStock === 0 ? 'text-red-600 dark:text-red-400' :
-                branchStock <= 10 ? 'text-yellow-600 dark:text-yellow-400' :
-                'text-green-600 dark:text-green-400'
-              }`}>
-                📦 {selectedBranch}: {branchStock.toLocaleString()} units
-              </p>
+              <>
+                <p className={`font-medium ${
+                  remainingStock === 0 ? 'text-red-600 dark:text-red-400' :
+                  remainingStock <= 5 ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-green-600 dark:text-green-400'
+                }`}>
+                  📦 {selectedBranch}: <strong>{remainingStock.toLocaleString()}</strong> available
+                </p>
+                {qtyInCart > 0 && (
+                  <p className="text-blue-600 dark:text-blue-400 font-medium">
+                    🛒 {qtyInCart} in cart ({branchStock.toLocaleString()} total)
+                  </p>
+                )}
+              </>
             ) : (
               <p className={`font-medium ${
                 (item.stock_qty || 0) === 0 ? 'text-red-600 dark:text-red-400' :
@@ -1474,15 +1515,15 @@ const canAddItem = (item: SellableItem): boolean => {
               e.stopPropagation()
               addToCart(item)
             }}
-            disabled={!canAdd || !hasStock || branchStock === 0}
+            disabled={!canAdd || remainingStock === 0}
             size="sm"
             className="w-full"
-            variant={canAdd && hasStock && branchStock > 0 ? "primary" : "outline"}
+            variant={canAdd && remainingStock > 0 ? "primary" : "outline"}
             type="button"
           >
-            {branchStock === 0 ? (
-              'Out of Stock'
-            ) : !hasStock ? (
+            {remainingStock === 0 && qtyInCart > 0 ? (
+              'All stock in cart'
+            ) : remainingStock === 0 ? (
               'Out of Stock'
             ) : !selectedVoucherType || !selectedBranch || !selectedSalesPerson || !selectedUser ? (
               'Fill required fields'
@@ -1499,9 +1540,9 @@ const canAddItem = (item: SellableItem): boolean => {
           </Button>
           
           {/* Voucher Limit Warning */}
-          {maxQuantity > 0 && maxQuantity < 10 && hasStock && (
+          {maxQuantity > 0 && maxQuantity < 10 && remainingStock > 0 && (
             <p className="text-xs text-yellow-600 dark:text-yellow-400">
-              ⚠️ Max: {Math.min(maxQuantity, branchStock)} items (voucher limit)
+              ⚠️ Max: {Math.min(maxQuantity, remainingStock)} items (voucher limit)
             </p>
           )}
         </div>
