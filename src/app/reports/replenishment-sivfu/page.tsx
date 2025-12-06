@@ -156,7 +156,8 @@ export default function ReplenishmentSIVFUPage() {
       csvContent += `${row.Nas_Lain_M0},${row.Nas_Lain_M1},${row.Nas_Lain_M2},${row.Nas_Lain_M3},`
       
       BRANCHES.forEach(branch => {
-        const avgFlow = ((row[`${branch}_S_M1`] || 0) + (row[`${branch}_S_M2`] || 0) + (row[`${branch}_S_M3`] || 0) + (row[`${branch}_L_M1`] || 0) + (row[`${branch}_L_M2`] || 0) + (row[`${branch}_L_M3`] || 0)) / 3
+        // Use pre-calculated Avg Flow from backend
+        const avgFlow = row[`${branch}_Avg_Flow`] || 0
         csvContent += `${row[`${branch}_Stock`] || 0},`
         csvContent += `${row[`${branch}_S_M0`] || 0},${row[`${branch}_S_M1`] || 0},${row[`${branch}_S_M2`] || 0},${row[`${branch}_S_M3`] || 0},`
         csvContent += `${row[`${branch}_L_M0`] || 0},${row[`${branch}_L_M1`] || 0},${row[`${branch}_L_M2`] || 0},${row[`${branch}_L_M3`] || 0},`
@@ -404,7 +405,8 @@ export default function ReplenishmentSIVFUPage() {
                         const lM1 = row[`${branch}_L_M1`] || 0
                         const lM2 = row[`${branch}_L_M2`] || 0
                         const lM3 = row[`${branch}_L_M3`] || 0
-                        const avgFlow = (sM1 + sM2 + sM3 + lM1 + lM2 + lM3) / 3
+                        // Use pre-calculated Avg Flow from backend
+                        const avgFlow = row[`${branch}_Avg_Flow`] || 0
                         
                         return (
                           <Fragment key={`${branch}-${idx}`}>

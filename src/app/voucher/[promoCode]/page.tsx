@@ -1427,12 +1427,15 @@ const canAddItem = (item: SellableItem): boolean => {
 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
   {currentItems.map((item) => {
     const imageUrl = getImageUrl(item.image)
-    const maxQuantity = Math.floor(remainingVoucherValue / item.price)
+    const UPPER_TOLERANCE = 25000
+    const maxAllowedTotal = (promo?.nilai || 0) + UPPER_TOLERANCE
+    const remainingWithTolerance = maxAllowedTotal - cartTotal
+    const maxQuantity = Math.floor(remainingWithTolerance / item.price)
     const hasStock = canAddItem(item)
     const branchStock = selectedBranch ? getStockForBranch(item, selectedBranch) : (item.stock_qty || 0)
     const remainingStock = selectedBranch ? getRemainingStock(item, selectedBranch) : branchStock
     const qtyInCart = cart.find(ci => ci.item.item_code === item.item_code)?.quantity || 0
-    const canAdd = remainingVoucherValue >= item.price && hasStock && selectedVoucherType && selectedBranch && selectedSalesPerson && selectedUser && remainingStock > 0
+    const canAdd = remainingWithTolerance >= item.price && hasStock && selectedVoucherType && selectedBranch && selectedSalesPerson && selectedUser && remainingStock > 0
     
     return (
       <div key={item.item_code} className={`relative border border-gray-200 dark:border-dark-border rounded-lg p-4 hover:shadow-md transition-shadow ${!hasStock ? 'opacity-60' : ''}`}>
@@ -1527,8 +1530,8 @@ const canAddItem = (item: SellableItem): boolean => {
               'Out of Stock'
             ) : !selectedVoucherType || !selectedBranch || !selectedSalesPerson || !selectedUser ? (
               'Fill required fields'
-            ) : remainingVoucherValue < item.price ? (
-              'Exceeds voucher value'
+            ) : remainingWithTolerance < item.price ? (
+              'Exceeds limit (+25k)'
             ) : (
               <>
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -12,6 +12,8 @@ SELECT
         THEN ROUND( SUM(fd.current_qty) / ( (SUM(fd.s_m1)+SUM(fd.s_m2)+SUM(fd.s_m3) + SUM(fd.l_m1)+SUM(fd.l_m2)+SUM(fd.l_m3)) / 3 ) , 1)
         ELSE 999 
     END AS Nas_Total_DOI,
+    -- Avg Flow NASIONAL
+    ROUND( (SUM(fd.s_m1)+SUM(fd.s_m2)+SUM(fd.s_m3) + SUM(fd.l_m1)+SUM(fd.l_m2)+SUM(fd.l_m3)) / 3 , 1) AS Nas_Avg_Flow,
 
     SUM(fd.s_m0) AS Nas_Sales_M0, SUM(fd.s_m1) AS Nas_Sales_M1, SUM(fd.s_m2) AS Nas_Sales_M2, SUM(fd.s_m3) AS Nas_Sales_M3,
     SUM(fd.l_m0) AS Nas_Lain_M0,  SUM(fd.l_m1) AS Nas_Lain_M1,  SUM(fd.l_m2) AS Nas_Lain_M2,  SUM(fd.l_m3) AS Nas_Lain_M3,
@@ -25,6 +27,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='JKT' THEN fd.doi_val ELSE 0 END) AS JKT_DOI,
     SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m0 ELSE 0 END) AS JKT_S_M0, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m1 ELSE 0 END) AS JKT_S_M1, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m2 ELSE 0 END) AS JKT_S_M2, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m3 ELSE 0 END) AS JKT_S_M3,
     SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m0 ELSE 0 END) AS JKT_L_M0, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m1 ELSE 0 END) AS JKT_L_M1, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m2 ELSE 0 END) AS JKT_L_M2, SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m3 ELSE 0 END) AS JKT_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JKT' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JKT' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS JKT_Avg_Flow,
 
     -- 2. SBY
     SUM(CASE WHEN fd.branch_id='SBY' THEN fd.current_qty ELSE 0 END) AS SBY_Stock,
@@ -32,6 +35,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='SBY' THEN fd.doi_val ELSE 0 END) AS SBY_DOI,
     SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m0 ELSE 0 END) AS SBY_S_M0, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m1 ELSE 0 END) AS SBY_S_M1, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m2 ELSE 0 END) AS SBY_S_M2, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m3 ELSE 0 END) AS SBY_S_M3,
     SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m0 ELSE 0 END) AS SBY_L_M0, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m1 ELSE 0 END) AS SBY_L_M1, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m2 ELSE 0 END) AS SBY_L_M2, SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m3 ELSE 0 END) AS SBY_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SBY' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SBY' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS SBY_Avg_Flow,
 
     -- 3. SMG
     SUM(CASE WHEN fd.branch_id='SMG' THEN fd.current_qty ELSE 0 END) AS SMG_Stock,
@@ -39,6 +43,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='SMG' THEN fd.doi_val ELSE 0 END) AS SMG_DOI,
     SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m0 ELSE 0 END) AS SMG_S_M0, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m1 ELSE 0 END) AS SMG_S_M1, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m2 ELSE 0 END) AS SMG_S_M2, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m3 ELSE 0 END) AS SMG_S_M3,
     SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m0 ELSE 0 END) AS SMG_L_M0, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m1 ELSE 0 END) AS SMG_L_M1, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m2 ELSE 0 END) AS SMG_L_M2, SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m3 ELSE 0 END) AS SMG_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMG' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMG' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS SMG_Avg_Flow,
 
     -- 4. MDN
     SUM(CASE WHEN fd.branch_id='MDN' THEN fd.current_qty ELSE 0 END) AS MDN_Stock,
@@ -46,6 +51,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MDN' THEN fd.doi_val ELSE 0 END) AS MDN_DOI,
     SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m0 ELSE 0 END) AS MDN_S_M0, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m1 ELSE 0 END) AS MDN_S_M1, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m2 ELSE 0 END) AS MDN_S_M2, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m3 ELSE 0 END) AS MDN_S_M3,
     SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m0 ELSE 0 END) AS MDN_L_M0, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m1 ELSE 0 END) AS MDN_L_M1, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m2 ELSE 0 END) AS MDN_L_M2, SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m3 ELSE 0 END) AS MDN_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MDN_Avg_Flow,
 
     -- 5. HO
     SUM(CASE WHEN fd.branch_id='HO' THEN fd.current_qty ELSE 0 END) AS HO_Stock,
@@ -53,6 +59,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='HO' THEN fd.doi_val ELSE 0 END) AS HO_DOI,
     SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m0 ELSE 0 END) AS HO_S_M0, SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m1 ELSE 0 END) AS HO_S_M1, SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m2 ELSE 0 END) AS HO_S_M2, SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m3 ELSE 0 END) AS HO_S_M3,
     SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m0 ELSE 0 END) AS HO_L_M0, SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m1 ELSE 0 END) AS HO_L_M1, SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m2 ELSE 0 END) AS HO_L_M2, SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m3 ELSE 0 END) AS HO_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS HO_Avg_Flow,
 
     -- 6. MKS
     SUM(CASE WHEN fd.branch_id='MKS' THEN fd.current_qty ELSE 0 END) AS MKS_Stock,
@@ -60,6 +67,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKS' THEN fd.doi_val ELSE 0 END) AS MKS_DOI,
     SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m0 ELSE 0 END) AS MKS_S_M0, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m1 ELSE 0 END) AS MKS_S_M1, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m2 ELSE 0 END) AS MKS_S_M2, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m3 ELSE 0 END) AS MKS_S_M3,
     SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m0 ELSE 0 END) AS MKS_L_M0, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m1 ELSE 0 END) AS MKS_L_M1, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m2 ELSE 0 END) AS MKS_L_M2, SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m3 ELSE 0 END) AS MKS_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKS_Avg_Flow,
 
     -- 7. BJM
     SUM(CASE WHEN fd.branch_id='BJM' THEN fd.current_qty ELSE 0 END) AS BJM_Stock,
@@ -67,6 +75,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='BJM' THEN fd.doi_val ELSE 0 END) AS BJM_DOI,
     SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m0 ELSE 0 END) AS BJM_S_M0, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m1 ELSE 0 END) AS BJM_S_M1, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m2 ELSE 0 END) AS BJM_S_M2, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m3 ELSE 0 END) AS BJM_S_M3,
     SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m0 ELSE 0 END) AS BJM_L_M0, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m1 ELSE 0 END) AS BJM_L_M1, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m2 ELSE 0 END) AS BJM_L_M2, SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m3 ELSE 0 END) AS BJM_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS BJM_Avg_Flow,
 
     -- 8. PKU
     SUM(CASE WHEN fd.branch_id='PKU' THEN fd.current_qty ELSE 0 END) AS PKU_Stock,
@@ -74,6 +83,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PKU' THEN fd.doi_val ELSE 0 END) AS PKU_DOI,
     SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m0 ELSE 0 END) AS PKU_S_M0, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m1 ELSE 0 END) AS PKU_S_M1, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m2 ELSE 0 END) AS PKU_S_M2, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m3 ELSE 0 END) AS PKU_S_M3,
     SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m0 ELSE 0 END) AS PKU_L_M0, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m1 ELSE 0 END) AS PKU_L_M1, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m2 ELSE 0 END) AS PKU_L_M2, SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m3 ELSE 0 END) AS PKU_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PKU_Avg_Flow,
 
     -- 9. DPS
     SUM(CASE WHEN fd.branch_id='DPS' THEN fd.current_qty ELSE 0 END) AS DPS_Stock,
@@ -81,6 +91,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='DPS' THEN fd.doi_val ELSE 0 END) AS DPS_DOI,
     SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m0 ELSE 0 END) AS DPS_S_M0, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m1 ELSE 0 END) AS DPS_S_M1, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m2 ELSE 0 END) AS DPS_S_M2, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m3 ELSE 0 END) AS DPS_S_M3,
     SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m0 ELSE 0 END) AS DPS_L_M0, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m1 ELSE 0 END) AS DPS_L_M1, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m2 ELSE 0 END) AS DPS_L_M2, SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m3 ELSE 0 END) AS DPS_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DPS' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DPS' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS DPS_Avg_Flow,
 
     -- 10. PLG
     SUM(CASE WHEN fd.branch_id='PLG' THEN fd.current_qty ELSE 0 END) AS PLG_Stock,
@@ -88,6 +99,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PLG' THEN fd.doi_val ELSE 0 END) AS PLG_DOI,
     SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m0 ELSE 0 END) AS PLG_S_M0, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m1 ELSE 0 END) AS PLG_S_M1, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m2 ELSE 0 END) AS PLG_S_M2, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m3 ELSE 0 END) AS PLG_S_M3,
     SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m0 ELSE 0 END) AS PLG_L_M0, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m1 ELSE 0 END) AS PLG_L_M1, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m2 ELSE 0 END) AS PLG_L_M2, SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m3 ELSE 0 END) AS PLG_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PLG_Avg_Flow,
 
     -- 11. YGY
     SUM(CASE WHEN fd.branch_id='YGY' THEN fd.current_qty ELSE 0 END) AS YGY_Stock,
@@ -95,6 +107,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='YGY' THEN fd.doi_val ELSE 0 END) AS YGY_DOI,
     SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m0 ELSE 0 END) AS YGY_S_M0, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m1 ELSE 0 END) AS YGY_S_M1, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m2 ELSE 0 END) AS YGY_S_M2, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m3 ELSE 0 END) AS YGY_S_M3,
     SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m0 ELSE 0 END) AS YGY_L_M0, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m1 ELSE 0 END) AS YGY_L_M1, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m2 ELSE 0 END) AS YGY_L_M2, SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m3 ELSE 0 END) AS YGY_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='YGY' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='YGY' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS YGY_Avg_Flow,
 
     -- 12. MND
     SUM(CASE WHEN fd.branch_id='MND' THEN fd.current_qty ELSE 0 END) AS MND_Stock,
@@ -102,6 +115,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MND' THEN fd.doi_val ELSE 0 END) AS MND_DOI,
     SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m0 ELSE 0 END) AS MND_S_M0, SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m1 ELSE 0 END) AS MND_S_M1, SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m2 ELSE 0 END) AS MND_S_M2, SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m3 ELSE 0 END) AS MND_S_M3,
     SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m0 ELSE 0 END) AS MND_L_M0, SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m1 ELSE 0 END) AS MND_L_M1, SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m2 ELSE 0 END) AS MND_L_M2, SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m3 ELSE 0 END) AS MND_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MND' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MND' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MND_Avg_Flow,
 
     -- 13. KPG
     SUM(CASE WHEN fd.branch_id='KPG' THEN fd.current_qty ELSE 0 END) AS KPG_Stock,
@@ -109,6 +123,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='KPG' THEN fd.doi_val ELSE 0 END) AS KPG_DOI,
     SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m0 ELSE 0 END) AS KPG_S_M0, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m1 ELSE 0 END) AS KPG_S_M1, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m2 ELSE 0 END) AS KPG_S_M2, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m3 ELSE 0 END) AS KPG_S_M3,
     SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m0 ELSE 0 END) AS KPG_L_M0, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m1 ELSE 0 END) AS KPG_L_M1, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m2 ELSE 0 END) AS KPG_L_M2, SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m3 ELSE 0 END) AS KPG_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='KPG' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='KPG' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS KPG_Avg_Flow,
 
     -- 14. PDG
     SUM(CASE WHEN fd.branch_id='PDG' THEN fd.current_qty ELSE 0 END) AS PDG_Stock,
@@ -116,6 +131,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PDG' THEN fd.doi_val ELSE 0 END) AS PDG_DOI,
     SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m0 ELSE 0 END) AS PDG_S_M0, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m1 ELSE 0 END) AS PDG_S_M1, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m2 ELSE 0 END) AS PDG_S_M2, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m3 ELSE 0 END) AS PDG_S_M3,
     SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m0 ELSE 0 END) AS PDG_L_M0, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m1 ELSE 0 END) AS PDG_L_M1, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m2 ELSE 0 END) AS PDG_L_M2, SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m3 ELSE 0 END) AS PDG_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PDG_Avg_Flow,
 
     -- 15. PDG1
     SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.current_qty ELSE 0 END) AS PDG1_Stock,
@@ -123,6 +139,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.doi_val ELSE 0 END) AS PDG1_DOI,
     SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m0 ELSE 0 END) AS PDG1_S_M0, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m1 ELSE 0 END) AS PDG1_S_M1, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m2 ELSE 0 END) AS PDG1_S_M2, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m3 ELSE 0 END) AS PDG1_S_M3,
     SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m0 ELSE 0 END) AS PDG1_L_M0, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m1 ELSE 0 END) AS PDG1_L_M1, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m2 ELSE 0 END) AS PDG1_L_M2, SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m3 ELSE 0 END) AS PDG1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PDG1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PDG1_Avg_Flow,
 
     -- 16. SMR1
     SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.current_qty ELSE 0 END) AS SMR1_Stock,
@@ -130,6 +147,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.doi_val ELSE 0 END) AS SMR1_DOI,
     SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m0 ELSE 0 END) AS SMR1_S_M0, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m1 ELSE 0 END) AS SMR1_S_M1, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m2 ELSE 0 END) AS SMR1_S_M2, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m3 ELSE 0 END) AS SMR1_S_M3,
     SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m0 ELSE 0 END) AS SMR1_L_M0, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m1 ELSE 0 END) AS SMR1_L_M1, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m2 ELSE 0 END) AS SMR1_L_M2, SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m3 ELSE 0 END) AS SMR1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='SMR1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS SMR1_Avg_Flow,
 
     -- 17. DP1
     SUM(CASE WHEN fd.branch_id='DP1' THEN fd.current_qty ELSE 0 END) AS DP1_Stock,
@@ -137,6 +155,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='DP1' THEN fd.doi_val ELSE 0 END) AS DP1_DOI,
     SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m0 ELSE 0 END) AS DP1_S_M0, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m1 ELSE 0 END) AS DP1_S_M1, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m2 ELSE 0 END) AS DP1_S_M2, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m3 ELSE 0 END) AS DP1_S_M3,
     SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m0 ELSE 0 END) AS DP1_L_M0, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m1 ELSE 0 END) AS DP1_L_M1, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m2 ELSE 0 END) AS DP1_L_M2, SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m3 ELSE 0 END) AS DP1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DP1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='DP1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS DP1_Avg_Flow,
 
     -- 18. MDN1
     SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.current_qty ELSE 0 END) AS MDN1_Stock,
@@ -144,6 +163,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.doi_val ELSE 0 END) AS MDN1_DOI,
     SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m0 ELSE 0 END) AS MDN1_S_M0, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m1 ELSE 0 END) AS MDN1_S_M1, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m2 ELSE 0 END) AS MDN1_S_M2, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m3 ELSE 0 END) AS MDN1_S_M3,
     SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m0 ELSE 0 END) AS MDN1_L_M0, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m1 ELSE 0 END) AS MDN1_L_M1, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m2 ELSE 0 END) AS MDN1_L_M2, SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m3 ELSE 0 END) AS MDN1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MDN1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MDN1_Avg_Flow,
 
     -- 19. AMB
     SUM(CASE WHEN fd.branch_id='AMB' THEN fd.current_qty ELSE 0 END) AS AMB_Stock,
@@ -151,6 +171,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='AMB' THEN fd.doi_val ELSE 0 END) AS AMB_DOI,
     SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m0 ELSE 0 END) AS AMB_S_M0, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m1 ELSE 0 END) AS AMB_S_M1, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m2 ELSE 0 END) AS AMB_S_M2, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m3 ELSE 0 END) AS AMB_S_M3,
     SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m0 ELSE 0 END) AS AMB_L_M0, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m1 ELSE 0 END) AS AMB_L_M1, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m2 ELSE 0 END) AS AMB_L_M2, SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m3 ELSE 0 END) AS AMB_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS AMB_Avg_Flow,
 
     -- 20. HO2
     SUM(CASE WHEN fd.branch_id='HO2' THEN fd.current_qty ELSE 0 END) AS HO2_Stock,
@@ -158,6 +179,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='HO2' THEN fd.doi_val ELSE 0 END) AS HO2_DOI,
     SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m0 ELSE 0 END) AS HO2_S_M0, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m1 ELSE 0 END) AS HO2_S_M1, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m2 ELSE 0 END) AS HO2_S_M2, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m3 ELSE 0 END) AS HO2_S_M3,
     SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m0 ELSE 0 END) AS HO2_L_M0, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m1 ELSE 0 END) AS HO2_L_M1, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m2 ELSE 0 END) AS HO2_L_M2, SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m3 ELSE 0 END) AS HO2_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO2' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='HO2' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS HO2_Avg_Flow,
 
     -- 21. PKU1
     SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.current_qty ELSE 0 END) AS PKU1_Stock,
@@ -165,6 +187,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.doi_val ELSE 0 END) AS PKU1_DOI,
     SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m0 ELSE 0 END) AS PKU1_S_M0, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m1 ELSE 0 END) AS PKU1_S_M1, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m2 ELSE 0 END) AS PKU1_S_M2, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m3 ELSE 0 END) AS PKU1_S_M3,
     SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m0 ELSE 0 END) AS PKU1_L_M0, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m1 ELSE 0 END) AS PKU1_L_M1, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m2 ELSE 0 END) AS PKU1_L_M2, SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m3 ELSE 0 END) AS PKU1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PKU1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PKU1_Avg_Flow,
 
     -- 22. JMB1
     SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.current_qty ELSE 0 END) AS JMB1_Stock,
@@ -172,6 +195,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.doi_val ELSE 0 END) AS JMB1_DOI,
     SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m0 ELSE 0 END) AS JMB1_S_M0, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m1 ELSE 0 END) AS JMB1_S_M1, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m2 ELSE 0 END) AS JMB1_S_M2, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m3 ELSE 0 END) AS JMB1_S_M3,
     SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m0 ELSE 0 END) AS JMB1_L_M0, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m1 ELSE 0 END) AS JMB1_L_M1, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m2 ELSE 0 END) AS JMB1_L_M2, SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m3 ELSE 0 END) AS JMB1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='JMB1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS JMB1_Avg_Flow,
 
     -- 23. BKP
     SUM(CASE WHEN fd.branch_id='BKP' THEN fd.current_qty ELSE 0 END) AS BKP_Stock,
@@ -179,6 +203,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='BKP' THEN fd.doi_val ELSE 0 END) AS BKP_DOI,
     SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m0 ELSE 0 END) AS BKP_S_M0, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m1 ELSE 0 END) AS BKP_S_M1, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m2 ELSE 0 END) AS BKP_S_M2, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m3 ELSE 0 END) AS BKP_S_M3,
     SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m0 ELSE 0 END) AS BKP_L_M0, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m1 ELSE 0 END) AS BKP_L_M1, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m2 ELSE 0 END) AS BKP_L_M2, SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m3 ELSE 0 END) AS BKP_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BKP' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BKP' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS BKP_Avg_Flow,
 
     -- 24. PLU1
     SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.current_qty ELSE 0 END) AS PLU1_Stock,
@@ -186,6 +211,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.doi_val ELSE 0 END) AS PLU1_DOI,
     SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m0 ELSE 0 END) AS PLU1_S_M0, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m1 ELSE 0 END) AS PLU1_S_M1, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m2 ELSE 0 END) AS PLU1_S_M2, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m3 ELSE 0 END) AS PLU1_S_M3,
     SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m0 ELSE 0 END) AS PLU1_L_M0, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m1 ELSE 0 END) AS PLU1_L_M1, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m2 ELSE 0 END) AS PLU1_L_M2, SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m3 ELSE 0 END) AS PLU1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLU1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PLU1_Avg_Flow,
 
     -- 25. AMB1
     SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.current_qty ELSE 0 END) AS AMB1_Stock,
@@ -193,6 +219,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.doi_val ELSE 0 END) AS AMB1_DOI,
     SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m0 ELSE 0 END) AS AMB1_S_M0, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m1 ELSE 0 END) AS AMB1_S_M1, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m2 ELSE 0 END) AS AMB1_S_M2, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m3 ELSE 0 END) AS AMB1_S_M3,
     SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m0 ELSE 0 END) AS AMB1_L_M0, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m1 ELSE 0 END) AS AMB1_L_M1, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m2 ELSE 0 END) AS AMB1_L_M2, SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m3 ELSE 0 END) AS AMB1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='AMB1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS AMB1_Avg_Flow,
 
     -- 26. PLG1
     SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.current_qty ELSE 0 END) AS PLG1_Stock,
@@ -200,6 +227,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.doi_val ELSE 0 END) AS PLG1_DOI,
     SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m0 ELSE 0 END) AS PLG1_S_M0, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m1 ELSE 0 END) AS PLG1_S_M1, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m2 ELSE 0 END) AS PLG1_S_M2, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m3 ELSE 0 END) AS PLG1_S_M3,
     SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m0 ELSE 0 END) AS PLG1_L_M0, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m1 ELSE 0 END) AS PLG1_L_M1, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m2 ELSE 0 END) AS PLG1_L_M2, SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m3 ELSE 0 END) AS PLG1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PLG1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PLG1_Avg_Flow,
 
     -- 27. MKS1
     SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.current_qty ELSE 0 END) AS MKS1_Stock,
@@ -207,6 +235,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.doi_val ELSE 0 END) AS MKS1_DOI,
     SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m0 ELSE 0 END) AS MKS1_S_M0, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m1 ELSE 0 END) AS MKS1_S_M1, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m2 ELSE 0 END) AS MKS1_S_M2, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m3 ELSE 0 END) AS MKS1_S_M3,
     SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m0 ELSE 0 END) AS MKS1_L_M0, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m1 ELSE 0 END) AS MKS1_L_M1, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m2 ELSE 0 END) AS MKS1_L_M2, SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m3 ELSE 0 END) AS MKS1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKS1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKS1_Avg_Flow,
 
     -- 28. BJM1
     SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.current_qty ELSE 0 END) AS BJM1_Stock,
@@ -214,6 +243,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.doi_val ELSE 0 END) AS BJM1_DOI,
     SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m0 ELSE 0 END) AS BJM1_S_M0, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m1 ELSE 0 END) AS BJM1_S_M1, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m2 ELSE 0 END) AS BJM1_S_M2, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m3 ELSE 0 END) AS BJM1_S_M3,
     SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m0 ELSE 0 END) AS BJM1_L_M0, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m1 ELSE 0 END) AS BJM1_L_M1, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m2 ELSE 0 END) AS BJM1_L_M2, SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m3 ELSE 0 END) AS BJM1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='BJM1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS BJM1_Avg_Flow,
 
     -- 29. MKP
     SUM(CASE WHEN fd.branch_id='MKP' THEN fd.current_qty ELSE 0 END) AS MKP_Stock,
@@ -221,6 +251,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKP' THEN fd.doi_val ELSE 0 END) AS MKP_DOI,
     SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m0 ELSE 0 END) AS MKP_S_M0, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m1 ELSE 0 END) AS MKP_S_M1, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m2 ELSE 0 END) AS MKP_S_M2, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m3 ELSE 0 END) AS MKP_S_M3,
     SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m0 ELSE 0 END) AS MKP_L_M0, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m1 ELSE 0 END) AS MKP_L_M1, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m2 ELSE 0 END) AS MKP_L_M2, SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m3 ELSE 0 END) AS MKP_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKP' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKP' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKP_Avg_Flow,
 
     -- 30. PHL
     SUM(CASE WHEN fd.branch_id='PHL' THEN fd.current_qty ELSE 0 END) AS PHL_Stock,
@@ -228,6 +259,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PHL' THEN fd.doi_val ELSE 0 END) AS PHL_DOI,
     SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m0 ELSE 0 END) AS PHL_S_M0, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m1 ELSE 0 END) AS PHL_S_M1, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m2 ELSE 0 END) AS PHL_S_M2, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m3 ELSE 0 END) AS PHL_S_M3,
     SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m0 ELSE 0 END) AS PHL_L_M0, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m1 ELSE 0 END) AS PHL_L_M1, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m2 ELSE 0 END) AS PHL_L_M2, SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m3 ELSE 0 END) AS PHL_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PHL' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PHL' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PHL_Avg_Flow,
 
     -- 31. PTK1
     SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.current_qty ELSE 0 END) AS PTK1_Stock,
@@ -235,6 +267,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.doi_val ELSE 0 END) AS PTK1_DOI,
     SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m0 ELSE 0 END) AS PTK1_S_M0, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m1 ELSE 0 END) AS PTK1_S_M1, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m2 ELSE 0 END) AS PTK1_S_M2, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m3 ELSE 0 END) AS PTK1_S_M3,
     SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m0 ELSE 0 END) AS PTK1_L_M0, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m1 ELSE 0 END) AS PTK1_L_M1, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m2 ELSE 0 END) AS PTK1_L_M2, SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m3 ELSE 0 END) AS PTK1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='PTK1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS PTK1_Avg_Flow,
 
     -- 32. MKPS
     SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.current_qty ELSE 0 END) AS MKPS_Stock,
@@ -242,6 +275,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.doi_val ELSE 0 END) AS MKPS_DOI,
     SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m0 ELSE 0 END) AS MKPS_S_M0, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m1 ELSE 0 END) AS MKPS_S_M1, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m2 ELSE 0 END) AS MKPS_S_M2, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m3 ELSE 0 END) AS MKPS_S_M3,
     SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m0 ELSE 0 END) AS MKPS_L_M0, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m1 ELSE 0 END) AS MKPS_L_M1, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m2 ELSE 0 END) AS MKPS_L_M2, SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m3 ELSE 0 END) AS MKPS_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPS' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKPS_Avg_Flow,
 
     -- 33. MKPM
     SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.current_qty ELSE 0 END) AS MKPM_Stock,
@@ -249,6 +283,7 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.doi_val ELSE 0 END) AS MKPM_DOI,
     SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m0 ELSE 0 END) AS MKPM_S_M0, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m1 ELSE 0 END) AS MKPM_S_M1, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m2 ELSE 0 END) AS MKPM_S_M2, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m3 ELSE 0 END) AS MKPM_S_M3,
     SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m0 ELSE 0 END) AS MKPM_L_M0, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m1 ELSE 0 END) AS MKPM_L_M1, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m2 ELSE 0 END) AS MKPM_L_M2, SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m3 ELSE 0 END) AS MKPM_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPM' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKPM_Avg_Flow,
 
     -- 34. MKPN
     SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.current_qty ELSE 0 END) AS MKPN_Stock,
@@ -256,13 +291,15 @@ SELECT
     SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.doi_val ELSE 0 END) AS MKPN_DOI,
     SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m0 ELSE 0 END) AS MKPN_S_M0, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m1 ELSE 0 END) AS MKPN_S_M1, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m2 ELSE 0 END) AS MKPN_S_M2, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m3 ELSE 0 END) AS MKPN_S_M3,
     SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m0 ELSE 0 END) AS MKPN_L_M0, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m1 ELSE 0 END) AS MKPN_L_M1, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m2 ELSE 0 END) AS MKPN_L_M2, SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m3 ELSE 0 END) AS MKPN_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='MKPN' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS MKPN_Avg_Flow,
 
     -- 35. LPG1 (TAMBAHAN DARI DATA STOCK)
     SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.current_qty ELSE 0 END) AS LPG1_Stock,
     SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.replenishment_qty ELSE 0 END) AS LPG1_Replenish,
     SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.doi_val ELSE 0 END) AS LPG1_DOI,
     SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m0 ELSE 0 END) AS LPG1_S_M0, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m1 ELSE 0 END) AS LPG1_S_M1, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m2 ELSE 0 END) AS LPG1_S_M2, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m3 ELSE 0 END) AS LPG1_S_M3,
-    SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m0 ELSE 0 END) AS LPG1_L_M0, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m1 ELSE 0 END) AS LPG1_L_M1, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m2 ELSE 0 END) AS LPG1_L_M2, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m3 ELSE 0 END) AS LPG1_L_M3
+    SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m0 ELSE 0 END) AS LPG1_L_M0, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m1 ELSE 0 END) AS LPG1_L_M1, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m2 ELSE 0 END) AS LPG1_L_M2, SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m3 ELSE 0 END) AS LPG1_L_M3,
+    ROUND((SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.s_m3 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m1 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m2 ELSE 0 END) + SUM(CASE WHEN fd.branch_id='LPG1' THEN fd.l_m3 ELSE 0 END)) / 3, 1) AS LPG1_Avg_Flow
 
 FROM (
     SELECT 

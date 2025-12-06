@@ -40,6 +40,9 @@ export async function GET(request: Request) {
     const queryTime = Date.now() - startTime
     console.log(`✅ [SIVFU] Query executed in ${queryTime}ms, returned ${rows.length} rows`)
 
+    // Avg Flow is now calculated directly in SQL query for all 35 branches
+    // No need for backend calculation
+
     // Apply pagination in-memory (since MySQL 5.x doesn't support LIMIT on complex queries easily)
     const total = rows.length
     const totalPages = Math.ceil(total / limit)
