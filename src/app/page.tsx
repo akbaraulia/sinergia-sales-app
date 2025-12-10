@@ -1,9 +1,23 @@
 'use client'
 
-import Link from "next/link"
-import { ThemeToggle, ThemeSelector } from "@/components/theme/ThemeToggle"
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/authStore'
 
 export default function Home() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    // If authenticated, redirect to dashboard
+    // If not authenticated, redirect to login
+    if (isAuthenticated) {
+      router.push('/dashboard')
+    } else {
+      router.push('/login')
+    }
+  }, [isAuthenticated, router])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-isabelline via-white to-champagne-50 dark:from-dark-bg dark:via-dark-surface dark:to-jet-800">
       {/* Header */}

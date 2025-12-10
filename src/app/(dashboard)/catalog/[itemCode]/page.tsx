@@ -14,6 +14,7 @@ interface StockLevel {
   warehouse_id: string
   warehouse_name: string
   projected_qty: number
+  branch: string // Branch code for filtering
 }
 
 interface SellableItem {
@@ -44,6 +45,27 @@ export default function ProductDetailPage() {
   const [item, setItem] = useState<SellableItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 🔒 Filter stock levels by user's allowed branches
+  const filteredStockLevels = React.useMemo(() => {
+    if (!item?.stock_levels) return []
+    
+    // If user has allowed_branches, filter stock levels
+    if (user?.allowed_branches && user.allowed_branches.length > 0) {
+      const filtered = item.stock_levels.filter(level => 
+        user.allowed_branches!.includes(level.branch)
+      )
+      console.log('🔒 [DETAIL] Filtered stock levels by allowed_branches:', {
+        total: item.stock_levels.length,
+        filtered: filtered.length,
+        allowed_branches: user.allowed_branches
+      })
+      return filtered
+    }
+    
+    // No restriction, return all
+    return item.stock_levels
+  }, [item?.stock_levels, user?.allowed_branches])
 
   // Generate image URL from ERP
   const getImageUrl = (imagePath?: string) => {
@@ -291,15 +313,34 @@ export default function ProductDetailPage() {
                         Warehouse Stock Levels
                       </h3>
                       
-                      {(!item.stock_levels || item.stock_levels.length === 0) ? (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      {(!filteredStockLevels || filteredStockLevels.length === 0) ? (
+                        <div className={`${
+                          user?.allowed_branches && user.allowed_branches.length > 0 && item?.stock_levels && item.stock_levels.length > 0
+                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                        } border rounded-lg p-4`}>
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={`w-5 h-5 mr-2 ${
+                              user?.allowed_branches && user.allowed_branches.length > 0 && item?.stock_levels && item.stock_levels.length > 0
+                                ? 'text-yellow-600 dark:text-yellow-400'
+                                : 'text-blue-600 dark:text-blue-400'
+                            }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                             </svg>
                             <div>
-                              <p className="font-medium text-blue-800 dark:text-blue-200">Bundle Item</p>
-                              <p className="text-sm text-blue-600 dark:text-blue-300">This is a bundle product with no individual stock tracking</p>
+                              {user?.allowed_branches && user.allowed_branches.length > 0 && item?.stock_levels && item.stock_levels.length > 0 ? (
+                                <>
+                                  <p className="font-medium text-yellow-800 dark:text-yellow-200">🔒 No Stock in Your Branch</p>
+                                  <p className="text-sm text-yellow-600 dark:text-yellow-300">
+                                    This item has no stock in your allowed branches: <strong>{user.allowed_branches.join(', ')}</strong>
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="font-medium text-blue-800 dark:text-blue-200">Bundle Item</p>
+                                  <p className="text-sm text-blue-600 dark:text-blue-300">This is a bundle product with no individual stock tracking</p>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -310,19 +351,19 @@ export default function ProductDetailPage() {
                             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
                               <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide mb-1">Total Stock</p>
                               <p className="text-xl font-bold text-green-700 dark:text-green-300">
-                                {item.stock_levels.reduce((sum, level) => sum + level.projected_qty, 0).toLocaleString()}
+                                {filteredStockLevels.reduce((sum, level) => sum + level.projected_qty, 0).toLocaleString()}
                               </p>
                             </div>
                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                               <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">Warehouses</p>
                               <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
-                                {item.stock_levels.length}
+                                {filteredStockLevels.length}
                               </p>
                             </div>
                             <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
                               <p className="text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-1">In Stock</p>
                               <p className="text-xl font-bold text-orange-700 dark:text-orange-300">
-                                {item.stock_levels.filter(level => level.projected_qty > 0).length}
+                                {filteredStockLevels.filter(level => level.projected_qty > 0).length}
                               </p>
                             </div>
                           </div>
@@ -345,7 +386,7 @@ export default function ProductDetailPage() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                                  {item.stock_levels
+                                  {filteredStockLevels
                                     .sort((a, b) => b.projected_qty - a.projected_qty) // Sort by stock descending
                                     .map((level, index) => (
                                     <tr key={level.warehouse_id} className={index % 2 === 0 ? 'bg-white dark:bg-dark-surface' : 'bg-gray-50 dark:bg-jet-900/50'}>
