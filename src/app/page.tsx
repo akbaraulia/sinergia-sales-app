@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from "next/link"
+import { ThemeToggle, ThemeSelector } from "@/components/theme/ThemeToggle"
 import { useAuthStore } from '@/store/authStore'
 
 export default function Home() {
@@ -9,8 +11,6 @@ export default function Home() {
   const { isAuthenticated } = useAuthStore()
 
   useEffect(() => {
-    // If authenticated, redirect to dashboard
-    // If not authenticated, redirect to login
     if (isAuthenticated) {
       router.push('/dashboard')
     } else {
