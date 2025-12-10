@@ -125,6 +125,15 @@ export default function VoucherFormPage() {
   const [loadingSales, setLoadingSales] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
 
+  // 🔒 Auto-select branch if user has only 1 allowed branch
+  useEffect(() => {
+    if (user?.allowed_branches && user.allowed_branches.length === 1) {
+      const singleBranch = user.allowed_branches[0]
+      setSelectedBranch(singleBranch)
+      console.log('🔒 [VOUCHER] Auto-selected single allowed branch:', singleBranch)
+    }
+  }, [user?.allowed_branches])
+
   // Calculate totals
   const cartTotal = cart.reduce((sum, item) => sum + item.subtotal, 0)
   const remainingVoucherValue = promo ? Math.max(0, promo.nilai - cartTotal) : 0
@@ -213,10 +222,17 @@ const canAddItem = (item: SellableItem): boolean => {
         if (data.success && data.data) {
           // Set branches
           if (data.data.branches && Array.isArray(data.data.branches)) {
-            const branchOptions: BranchOption[] = data.data.branches.map((branch: any) => ({
+            let branchOptions: BranchOption[] = data.data.branches.map((branch: any) => ({
               value: branch.name,
               label: branch.branch || branch.name
             }))
+            
+            // 🔒 Filter branches by user's allowed_branches
+            if (user?.allowed_branches && user.allowed_branches.length > 0) {
+              branchOptions = branchOptions.filter(b => user.allowed_branches!.includes(b.value))
+              console.log('🔒 [VOUCHER] Filtered branches by allowed_branches:', branchOptions.length)
+            }
+            
             setBranches(branchOptions)
             console.log('✅ [VOUCHER_FORM] Loaded branches from server script:', branchOptions.length)
             console.log('📍 [VOUCHER_FORM] Branch details:', branchOptions.map(b => ({ value: b.value, label: b.label })))
@@ -283,12 +299,18 @@ const canAddItem = (item: SellableItem): boolean => {
             }
           })
           
-          const branchOptions: BranchOption[] = Array.from(branchSet)
+          let branchOptions: BranchOption[] = Array.from(branchSet)
             .sort()
             .map(branch => ({
               value: branch,
               label: branch
             }))
+          
+          // 🔒 Filter branches by user's allowed_branches
+          if (user?.allowed_branches && user.allowed_branches.length > 0) {
+            branchOptions = branchOptions.filter(b => user.allowed_branches!.includes(b.value))
+            console.log('🔒 [VOUCHER] Filtered fallback branches by allowed_branches:', branchOptions.length)
+          }
           
           setBranches(branchOptions)
           console.log('✅ [VOUCHER] Loaded branches from fallback (stock levels):', branchOptions.length)
@@ -311,8 +333,8 @@ const canAddItem = (item: SellableItem): boolean => {
     setLoadingUsers(true)
     
     try {
-      // Use API wrapper for server script to get customers for specific branch
-      const response = await fetch(`/api/erp/form-data?get_data=customer&branch_id=${encodeURIComponent(branchId)}`, {
+      // 🔒 Use same customer endpoint as customer list page - filtered by branch
+      const response = await fetch(`/api/erp/customers?branch=${encodeURIComponent(branchId)}&limit=1000`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -324,27 +346,25 @@ const canAddItem = (item: SellableItem): boolean => {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📦 [VOUCHER_CUSTOMERS] Customer data response:', JSON.stringify(data, null, 2))
+        console.log('📦 [VOUCHER_CUSTOMERS] Customer data response:', data.success ? `${data.customers?.length || 0} customers` : 'error')
         
-        if (data.success && data.data && data.data.customers && Array.isArray(data.data.customers)) {
+        if (data.success && Array.isArray(data.customers)) {
           // Convert customers to ERPUser format for compatibility
-          const customers: ERPUser[] = data.data.customers.map((customer: any) => ({
+          const customers: ERPUser[] = data.customers.map((customer: any) => ({
             name: customer.name,
-            email: customer.name, // Use name as email fallback
+            email: customer.email_id || customer.name,
             full_name: customer.customer_name || customer.name,
             user_type: 'Customer'
           }))
           setErpUsers(customers)
           console.log('✅ [VOUCHER_CUSTOMERS] Loaded customers for branch:', branchId, customers.length)
-          console.log('👤 [VOUCHER_CUSTOMERS] Customer details:', customers.map(c => ({ 
+          console.log('👤 [VOUCHER_CUSTOMERS] Sample customers:', customers.slice(0, 3).map(c => ({ 
             name: c.name, 
-            full_name: c.full_name 
+            full_name: c.full_name,
+            branch: branchId
           })))
-        } else if (data.success && data.data && data.data.customers && data.data.customers.error) {
-          console.warn('⚠️ [VOUCHER_CUSTOMERS] Customer fetch error:', data.data.customers.error)
-          setErpUsers([])
         } else {
-          console.warn('⚠️ [VOUCHER_CUSTOMERS] Unexpected customer data structure:', data)
+          console.warn('⚠️ [VOUCHER_CUSTOMERS] Unexpected customer data structure or empty results')
           setErpUsers([])
         }
       } else {
@@ -1135,11 +1155,15 @@ const canAddItem = (item: SellableItem): boolean => {
                     <div>
                       <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
                         Branch <span className="text-red-500">*</span>
+                        {user?.allowed_branches && user.allowed_branches.length === 1 && (
+                          <span className="text-xs text-asparagus-600 dark:text-asparagus-400 ml-2">(Auto-selected)</span>
+                        )}
                       </label>
                       <select
                         value={selectedBranch}
                         onChange={(e) => setSelectedBranch(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white"
+                        disabled={user?.allowed_branches && user.allowed_branches.length === 1}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-asparagus-500 focus:border-asparagus-500 bg-white dark:bg-dark-surface text-jet-800 dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
                         required
                       >
                         <option value="">Select Branch</option>

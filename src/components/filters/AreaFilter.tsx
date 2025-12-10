@@ -31,6 +31,7 @@ interface AreaFilterProps {
   allOptionLabel?: string
   autoFetch?: boolean
   disabled?: boolean
+  allowedBranches?: string[] // 🔒 Filter branches by user's allowed branches
 }
 
 export function AreaFilter({
@@ -44,7 +45,8 @@ export function AreaFilter({
   showAllOption = true,
   allOptionLabel = 'All Areas',
   autoFetch = true,
-  disabled = false
+  disabled = false,
+  allowedBranches
 }: AreaFilterProps) {
   const { showToast } = useToast()
   
@@ -68,8 +70,17 @@ export function AreaFilter({
 
   // Get current area list based on type
   const currentAreaList = useMemo(() => {
-    return areaType === 'branch' ? areaData.branches : areaData.rayons
-  }, [areaData, areaType])
+    let list = areaType === 'branch' ? areaData.branches : areaData.rayons
+    
+    // 🔒 Filter branches by allowedBranches if provided
+    if (areaType === 'branch' && allowedBranches && allowedBranches.length > 0) {
+      list = (list as AreaBranch[]).filter(branch => 
+        allowedBranches.includes(branch.name)
+      )
+    }
+    
+    return list
+  }, [areaData, areaType, allowedBranches])
 
   // Filter areas based on search query
   const filteredAreas = useMemo(() => {

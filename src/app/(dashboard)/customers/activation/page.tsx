@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AuthGuard from '@/components/common/AuthGuard'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { useAuthStore } from '@/store/authStore'
 import { useToast } from '@/components/common/ToastProvider'
 import { Customer } from '@/types/customer'
+import { AreaFilter } from '@/components/filters'
 
 interface SearchFilters {
   customer_id: string
@@ -51,6 +52,15 @@ export default function CustomerActivationPage() {
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successData, setSuccessData] = useState<SuccessModalData | null>(null)
+
+  // 🔒 Auto-select branch if user has only 1 allowed branch
+  useEffect(() => {
+    if (user?.allowed_branches && user.allowed_branches.length === 1) {
+      const singleBranch = user.allowed_branches[0]
+      setFilters(prev => ({ ...prev, branch: singleBranch }))
+      console.log('🔒 [ACTIVATION] Auto-selected single allowed branch:', singleBranch)
+    }
+  }, [user?.allowed_branches])
 
   // Get activation status badge
   const getStatusBadge = (customer: Customer) => {
@@ -390,17 +400,19 @@ Generated: ${new Date().toLocaleString('id-ID')}
 
                   <div>
                     <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-1">
-                      Branch
+                      Branch {user?.allowed_branches && user.allowed_branches.length === 1 && (
+                        <span className="text-xs text-asparagus-600 dark:text-asparagus-400 ml-1">(Auto-selected)</span>
+                      )}
                     </label>
-                    <input
-                      type="text"
-                      value={filters.branch}
-                      onChange={(e) => handleFilterChange('branch', e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                      placeholder="e.g., JKT"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
-                               bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                               focus:ring-2 focus:ring-asparagus-500 focus:border-transparent"
+                    <AreaFilter
+                      selectedArea={filters.branch}
+                      areaType="branch"
+                      onAreaChange={(value) => handleFilterChange('branch', value)}
+                      placeholder="Search branch..."
+                      showAllOption={false}
+                      disabled={user?.allowed_branches && user.allowed_branches.length === 1}
+                      allowedBranches={user?.allowed_branches}
+                      className="w-full"
                     />
                   </div>
 

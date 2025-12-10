@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import AuthGuard from '@/components/common/AuthGuard'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +35,15 @@ export default function CustomersPage() {
     hasMore: false,
     totalPages: 0
   })
+
+  // 🔒 Auto-select branch if user has only 1 allowed branch
+  useEffect(() => {
+    if (user?.allowed_branches && user.allowed_branches.length === 1) {
+      const singleBranch = user.allowed_branches[0]
+      setSelectedBranch(singleBranch)
+      console.log('🔒 [CUSTOMERS] Auto-selected single allowed branch:', singleBranch)
+    }
+  }, [user?.allowed_branches])
 
   // Check if filters are applied
   const hasFilters = selectedBranch !== 'all' || selectedRayon !== 'all'
@@ -202,7 +211,9 @@ export default function CustomersPage() {
                   {/* Branch Filter */}
                   <div>
                     <label className="block text-sm font-medium text-jet-700 dark:text-gray-300 mb-2">
-                      Branch
+                      Branch {user?.allowed_branches && user.allowed_branches.length === 1 && (
+                        <span className="text-xs text-asparagus-600 dark:text-asparagus-400">(Auto-selected)</span>
+                      )}
                     </label>
                     <AreaFilter
                       selectedArea={selectedBranch}
@@ -210,6 +221,8 @@ export default function CustomersPage() {
                       onAreaChange={setSelectedBranch}
                       placeholder="Search branch..."
                       allOptionLabel="All Branches"
+                      disabled={user?.allowed_branches && user.allowed_branches.length === 1}
+                      allowedBranches={user?.allowed_branches}
                     />
                   </div>
 

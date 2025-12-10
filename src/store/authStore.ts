@@ -7,6 +7,7 @@ interface User {
   name: string
   role?: string
   permissions: string[]
+  allowed_branches?: string[]
 }
 
 interface AuthState {

@@ -10,6 +10,10 @@ export interface ERPUser {
   roles: Array<{
     role: string
   }>
+  custom_allowed_branches?: Array<{
+    branch: string
+    [key: string]: any
+  }>
 }
 
 export interface LoginResponse {
@@ -19,6 +23,7 @@ export interface LoginResponse {
     name: string
     role: UserRole
     permissions: string[]
+    allowed_branches?: string[]
     cookies?: string
   }
   error?: string
@@ -125,7 +130,15 @@ class ERPNextClient {
    */
   async getUserInfo(email: string): Promise<LoginResponse> {
     try {
-      const userUrl = `${this.baseUrl}${ERP_CONFIG.ENDPOINTS.USER_INFO}/${email}`
+      // Fetch specific fields including custom_allowed_branches
+      const fields = encodeURIComponent(JSON.stringify([
+        'email',
+        'full_name',
+        'role_profile_name',
+        'roles',
+        'custom_allowed_branches'
+      ]))
+      const userUrl = `${this.baseUrl}${ERP_CONFIG.ENDPOINTS.USER_INFO}/${email}?fields=${fields}`
       
       // Development debugging
       if (process.env.NODE_ENV === 'development') {
@@ -164,20 +177,27 @@ class ERPNextClient {
           name: userData.full_name,
           role_profile_name: userData.role_profile_name,
           roles_count: userData.roles?.length || 0,
-          roles: userData.roles?.map(r => r.role).slice(0, 5) // First 5 roles only
+          roles: userData.roles?.map(r => r.role).slice(0, 5), // First 5 roles only
+          allowed_branches_count: userData.custom_allowed_branches?.length || 0,
+          allowed_branches: userData.custom_allowed_branches?.map(b => b.branch).slice(0, 5) // First 5 branches
         })
       }
 
       // Determine role berdasarkan email atau role_profile_name
       const role = this.determineUserRole(userData)
       const permissions = ROLE_PERMISSIONS[role]
+      
+      // Extract allowed branches from custom field
+      const allowedBranches = userData.custom_allowed_branches?.map(b => b.branch) || []
 
       // Development debugging - final result
       if (process.env.NODE_ENV === 'development') {
         console.log('🎯 [DEV] Role Determination:', {
           determined_role: role,
           permissions_count: permissions.length,
-          permissions: [...permissions]
+          permissions: [...permissions],
+          allowed_branches_count: allowedBranches.length,
+          allowed_branches: allowedBranches
         })
       }
 
@@ -187,7 +207,8 @@ class ERPNextClient {
           email: userData.email,
           name: userData.full_name,
           role,
-          permissions: [...permissions] // Convert readonly array to mutable array
+          permissions: [...permissions], // Convert readonly array to mutable array
+          allowed_branches: allowedBranches
         }
       }
 
