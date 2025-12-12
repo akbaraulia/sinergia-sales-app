@@ -38,16 +38,8 @@ export default function ReplenishmentReportPage() {
     m3: getMonthLabel(3)
   }
 
-  // Buffer mapping per branch
-  const getBufferByBranch = (branchCode: string): number => {
-    if (!branchCode) return 1 // Default if no branch code
-    const branch = branchCode.toUpperCase()
-    if (['JKT', 'HO', 'MKP'].includes(branch)) return 1
-    if (['YGY', 'SBY'].includes(branch)) return 2
-    if (['MDN', 'PKB', 'PLG', 'PDG', 'DP', 'PKU'].includes(branch)) return 2
-    if (['KPG', 'MND', 'MKS', 'BKP', 'PTK'].includes(branch)) return 4
-    return 1 // Default buffer
-  }
+  // Lead Time is now provided by API in custom_lead_time_in_month field
+  // No more hardcoded buffer mapping needed
 
   // Fetch data
   useEffect(() => {
@@ -219,15 +211,16 @@ export default function ReplenishmentReportPage() {
         const detail = warehouseDetails.get(whKey)!
         const whPrefix = `${detail.branch} - ${detail.warehouse}`
         warehouseHeaders.push(
+          `${whPrefix} - Lead Time`,
           `${whPrefix} - Total Stock`,
-          `${whPrefix} - Sales ${monthLabels.m0}`,
-          `${whPrefix} - Sales ${monthLabels.m1}`,
-          `${whPrefix} - Sales ${monthLabels.m2}`,
           `${whPrefix} - Sales ${monthLabels.m3}`,
-          `${whPrefix} - BBK ${monthLabels.m0}`,
-          `${whPrefix} - BBK ${monthLabels.m1}`,
-          `${whPrefix} - BBK ${monthLabels.m2}`,
+          `${whPrefix} - Sales ${monthLabels.m2}`,
+          `${whPrefix} - Sales ${monthLabels.m1}`,
+          `${whPrefix} - Sales ${monthLabels.m0}`,
           `${whPrefix} - BBK ${monthLabels.m3}`,
+          `${whPrefix} - BBK ${monthLabels.m2}`,
+          `${whPrefix} - BBK ${monthLabels.m1}`,
+          `${whPrefix} - BBK ${monthLabels.m0}`,
           `${whPrefix} - Avg Flow`,
           `${whPrefix} - DOI`,
           `${whPrefix} - REPLENISHMENT`
@@ -253,26 +246,27 @@ export default function ReplenishmentReportPage() {
           sortedWarehouseKeys.forEach(whKey => {
             const wh = row.warehouses.find(w => w.warehouse === whKey)
             if (wh) {
-              const buffer = getBufferByBranch(wh.branch_code)
-              const replenishment = wh.current_qty - (wh.avg_flow_m1_to_m3 * buffer)
+              const leadTime = wh.custom_lead_time_in_month || 0
+              const replenishment = (wh.avg_flow_m1_to_m3 * leadTime) - wh.current_qty
               
               warehouseData.push(
+                leadTime,
                 wh.current_qty,
-                wh.delivery_note_qty_m0,
-                wh.delivery_note_qty_m1,
-                wh.delivery_note_qty_m2,
                 wh.delivery_note_qty_m3,
-                wh.material_issue_qty_m0,
-                wh.material_issue_qty_m1,
-                wh.material_issue_qty_m2,
+                wh.delivery_note_qty_m2,
+                wh.delivery_note_qty_m1,
+                wh.delivery_note_qty_m0,
                 wh.material_issue_qty_m3,
+                wh.material_issue_qty_m2,
+                wh.material_issue_qty_m1,
+                wh.material_issue_qty_m0,
                 wh.avg_flow_m1_to_m3,
                 wh.doi_adjusted || '',
-                replenishment
+                Math.max(0, Math.ceil(replenishment))  // Negative = 0, Positive = as is
               )
             } else {
               // Warehouse not present for this item - fill with zeros
-              warehouseData.push(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0)
+              warehouseData.push(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0)
             }
           })
 
@@ -463,7 +457,7 @@ export default function ReplenishmentReportPage() {
         {/* Data Table - Pivoted Horizontal View */}
         {!loading && !error && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
               {data.length > 0 && (() => {
                 // Collect all unique warehouses from all items for consistent columns
                 const allWarehousesSet = new Set<string>()
@@ -493,16 +487,16 @@ export default function ReplenishmentReportPage() {
 
                 return (
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-20">
                       <tr>
-                        {/* Fixed columns */}
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-0 bg-gray-100 dark:bg-gray-700 z-10">
+                        {/* Fixed columns - z-30 for corner cells (sticky both directions) */}
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-0 bg-gray-100 dark:bg-gray-700 z-30">
                           Company
                         </th>
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-10">
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-30">
                           Item Code
                         </th>
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[200px] bg-gray-100 dark:bg-gray-700 z-10 min-w-[200px]">
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[200px] bg-gray-100 dark:bg-gray-700 z-30 min-w-[200px]">
                           Item Name
                         </th>
                         
@@ -510,7 +504,7 @@ export default function ReplenishmentReportPage() {
                         {sortedWarehouseKeys.map((whKey) => {
                           const detail = warehouseDetails.get(whKey)!
                           return (
-                            <th key={whKey} colSpan={12} className="px-3 py-2 text-center font-semibold text-asparagus-700 dark:text-asparagus-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">
+                            <th key={whKey} colSpan={13} className="px-3 py-2 text-center font-semibold text-asparagus-700 dark:text-asparagus-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">
                               {detail.branch} - {detail.warehouse}
                             </th>
                           )
@@ -522,21 +516,22 @@ export default function ReplenishmentReportPage() {
                         </th>
                       </tr>
                       <tr>
-                        {/* Sub-headers for each warehouse */}
+                        {/* Sub-headers for each warehouse - LTR order (M3 → M0) */}
                         {sortedWarehouseKeys.map((whKey) => (
                           <Fragment key={whKey}>
-                            <th className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-600">Total Stock</th>
-                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m0}</th>
-                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m1}</th>
-                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-amber-600 dark:text-amber-400 border-r dark:border-gray-600">Lead Time</th>
+                            <th className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-600">Stock</th>
                             <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m3}</th>
-                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m0}</th>
-                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m1}</th>
-                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m1}</th>
+                            <th className="px-2 py-1 text-right text-blue-600 dark:text-blue-400 border-r dark:border-gray-600">Sales {monthLabels.m0}</th>
                             <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m3}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m2}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m1}</th>
+                            <th className="px-2 py-1 text-right text-purple-600 dark:text-purple-400 border-r dark:border-gray-600">BBK {monthLabels.m0}</th>
                             <th className="px-2 py-1 text-right text-gray-600 dark:text-gray-400 border-r dark:border-gray-600">Avg Flow</th>
                             <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 border-r dark:border-gray-600">DOI</th>
-                            <th className="px-2 py-1 text-right text-orange-600 dark:text-orange-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">REPLENISHMENT</th>
+                            <th className="px-2 py-1 text-right text-orange-600 dark:text-orange-400 border-r-2 border-asparagus-300 dark:border-asparagus-600">REPLEN</th>
                           </Fragment>
                         ))}
                         
@@ -560,41 +555,44 @@ export default function ReplenishmentReportPage() {
                             {row.item_name}
                           </td>
                           
-                          {/* Dynamic warehouse data - ALL warehouses, fill with 0 if missing */}
+                          {/* Dynamic warehouse data - LTR order (M3 → M0) with Lead Time */}
                           {sortedWarehouseKeys.map((whKey) => {
                             const wh = row.warehouses.find(w => w.warehouse === whKey)
                             if (wh) {
-                              const buffer = getBufferByBranch(wh.branch_code)
-                              const replenishment = wh.current_qty - (wh.avg_flow_m1_to_m3 * buffer)
+                              const leadTime = wh.custom_lead_time_in_month || 0
+                              const replenishment = (wh.avg_flow_m1_to_m3 * leadTime) - wh.current_qty
                               
                               return (
                                 <Fragment key={whKey}>
+                                  <td className="px-2 py-2 text-right font-semibold text-amber-600 dark:text-amber-400 border-r dark:border-gray-700">
+                                    {leadTime}
+                                  </td>
                                   <td className="px-2 py-2 text-right font-semibold text-gray-900 dark:text-gray-100 border-r dark:border-gray-700">
                                     {formatNumber(wh.current_qty)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.delivery_note_qty_m0)}
-                                  </td>
-                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.delivery_note_qty_m1)}
+                                    {formatNumber(wh.delivery_note_qty_m3)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
                                     {formatNumber(wh.delivery_note_qty_m2)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.delivery_note_qty_m3)}
+                                    {formatNumber(wh.delivery_note_qty_m1)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-blue-700 dark:text-blue-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.delivery_note_qty_m0)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.material_issue_qty_m0)}
-                                  </td>
-                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.material_issue_qty_m1)}
+                                    {formatNumber(wh.material_issue_qty_m3)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
                                     {formatNumber(wh.material_issue_qty_m2)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
-                                    {formatNumber(wh.material_issue_qty_m3)}
+                                    {formatNumber(wh.material_issue_qty_m1)}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-purple-700 dark:text-purple-400 border-r dark:border-gray-700">
+                                    {formatNumber(wh.material_issue_qty_m0)}
                                   </td>
                                   <td className="px-2 py-2 text-right text-gray-700 dark:text-gray-300 border-r dark:border-gray-700">
                                     {formatNumber(wh.avg_flow_m1_to_m3)}
@@ -607,16 +605,17 @@ export default function ReplenishmentReportPage() {
                                     {wh.doi_adjusted !== null ? formatNumber(wh.doi_adjusted) : '-'}
                                   </td>
                                   <td className={`px-2 py-2 text-right font-bold border-r-2 border-asparagus-300 dark:border-asparagus-600 ${
-                                    replenishment < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+                                    replenishment > 0 ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : 'text-green-600 dark:text-green-400'
                                   }`}>
-                                    {formatNumber(replenishment)}
+                                    {formatNumber(Math.max(0, Math.ceil(replenishment)))}
                                   </td>
                                 </Fragment>
                               )
                             } else {
-                              // Warehouse not present for this item - show dashes
+                              // Warehouse not present for this item - show dashes (13 columns now)
                               return (
                                 <Fragment key={whKey}>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
                                   <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
                                   <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
                                   <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>

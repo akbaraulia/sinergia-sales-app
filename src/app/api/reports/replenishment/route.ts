@@ -24,46 +24,17 @@ export async function GET(request: Request) {
     
     console.log('🌐 [REPLENISHMENT] Calling:', erpUrl)
     
-    // Get API credentials from environment
-    const apiKey = process.env.ERPNEXT_API_KEY || process.env.ACTIVATION_USER_API_KEY
-    const apiSecret = process.env.ERPNEXT_API_SECRET || process.env.ACTIVATION_USER_API_SECRET
+    // Get cookies from the incoming request (user's session)
+    const cookies = new Headers(request.headers).get('cookie') || ''
     
-    // Alternative: use email/password if API key not available
-    const email = process.env.ACTIVATION_USER_EMAIL
-    const password = process.env.ACTIVATION_USER_PASSWORD
-    
-    console.log('🔑 [REPLENISHMENT] Auth check:', {
-      hasApiKey: !!apiKey,
-      hasApiSecret: !!apiSecret,
-      hasEmail: !!email,
-      hasPassword: !!password
-    })
-    
-    const headers: HeadersInit = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    }
-    
-    // Use API token if both key and secret are available
-    if (apiKey && apiSecret) {
-      headers['Authorization'] = `token ${apiKey}:${apiSecret}`
-      console.log('🔑 [REPLENISHMENT] Using API token authentication')
-    } else if (email && password) {
-      // Use basic auth as fallback
-      const basicAuth = Buffer.from(`${email}:${password}`).toString('base64')
-      headers['Authorization'] = `Basic ${basicAuth}`
-      console.log('🔑 [REPLENISHMENT] Using Basic authentication')
-    } else {
-      console.error('❌ [REPLENISHMENT] Missing ERPNext credentials')
-      console.error('Please set either:')
-      console.error('  1. ERPNEXT_API_KEY + ERPNEXT_API_SECRET')
-      console.error('  2. ACTIVATION_USER_EMAIL + ACTIVATION_USER_PASSWORD')
-      throw new Error('ERPNext credentials not configured')
-    }
+    console.log('🔑 [REPLENISHMENT] Using Cookie-based authentication from user session')
     
     const response = await fetch(erpUrl, {
       method: 'GET',
-      headers,
+      headers: {
+        'Cookie': cookies,
+        ...ERP_CONFIG.HEADERS
+      }
     })
 
     if (!response.ok) {

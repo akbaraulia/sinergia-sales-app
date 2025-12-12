@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   env: {
     HOSTNAME: '0.0.0.0',
     PORT: '3000',
+    NEXT_PUBLIC_ERP_BASE_URL: process.env.ERP_BASE_URL,
   },
 
   // Enable compression

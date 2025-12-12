@@ -16,13 +16,25 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
   const { isAuthenticated, user, hasPermission, logout } = useAuthStore()
   const [isValidating, setIsValidating] = useState(true)
   const [authStatus, setAuthStatus] = useState<'checking' | 'valid' | 'invalid'>('checking')
+  const [hasHydrated, setHasHydrated] = useState(false)
+  
+  // Wait for Zustand persist hydration
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
   
   useEffect(() => {
+    // Don't validate until store has hydrated from localStorage
+    if (!hasHydrated) {
+      console.log('🛡️ [AuthGuard] Waiting for store hydration...')
+      return
+    }
+    
     let isMounted = true
     
     const validateSession = async () => {
       try {
-        console.log('🛡️ [AuthGuard] Quick auth check (NO AUTO-LOGOUT)...')
+        console.log('🛡️ [AuthGuard] Quick auth check (NO AUTO-LOGOUT)...', { isAuthenticated, user: user?.email })
         
         // ONLY check localStorage auth state - NO SESSION EXPIRY CHECK
         if (!isAuthenticated || !user) {
@@ -72,7 +84,7 @@ export default function AuthGuard({ children, requiredPermissions = [] }: AuthGu
     return () => {
       isMounted = false
     }
-  }, [isAuthenticated, user, hasPermission, requiredPermissions, router])
+  }, [isAuthenticated, user, hasPermission, requiredPermissions, router, hasHydrated])
 
   // Show loading while validating
   if (isValidating || authStatus === 'checking') {

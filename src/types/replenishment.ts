@@ -6,6 +6,7 @@ export interface WarehouseData {
   warehouse_name: string
   branch_code: string
   branch_name: string
+  custom_lead_time_in_month: number
   current_qty: number
   current_stock_value: number
   delivery_note_qty_m0: number
