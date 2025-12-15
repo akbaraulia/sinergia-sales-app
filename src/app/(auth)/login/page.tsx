@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Form'
 import { Alert } from '@/components/ui/Alert'
 import { ERP_CONFIG } from '@/lib/constants/erp'
-import Link from 'next/link'
 import Image from 'next/image'
 
 export default function LoginPageERP() {
@@ -108,11 +107,6 @@ export default function LoginPageERP() {
           <p className="mt-2 text-sm text-jet-600 dark:text-jet-300">
             Sign in to your Sinergia ERP account
           </p>
-          <div className="mt-2 text-xs text-jet-500 dark:text-jet-400">
-            Environment: <span className="font-semibold">
-              {process.env.NEXT_PUBLIC_ERP_ENV === 'PROD' ? 'Production' : 'Development'}
-            </span> | ERP: <span className="font-mono text-xs">{ERP_CONFIG.BASE_URL}</span>
-          </div>
         </div>
 
         {/* Login Form */}
@@ -209,24 +203,14 @@ export default function LoginPageERP() {
             {/* Footer */}
             <div className="mt-6 text-center">
               <p className="text-sm text-jet-600 dark:text-jet-400">
-                Don&apos;t have an account?{' '}
-                <Link 
-                  href="/register" 
-                  className="font-medium text-asparagus-600 hover:text-asparagus-500 dark:text-asparagus-400 dark:hover:text-asparagus-300"
-                >
-                  Sign up
-                </Link>
+                Need an account?{' '}
+                <span className="font-medium text-asparagus-600 dark:text-asparagus-400">
+                  Contact your administrator
+                </span>
               </p>
             </div>
           </div>
         </form>
-
-        {/* API Info */}
-        <div className="text-center">
-          <p className="text-xs text-jet-500 dark:text-jet-400">
-            Connected to: <span className="font-mono">{ERP_CONFIG.BASE_URL}</span>
-          </p>
-        </div>
       </div>
     </div>
   )
