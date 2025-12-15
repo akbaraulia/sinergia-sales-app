@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { StatusBadge } from '@/components/ui/Badge'
 import { LoadingCard } from '@/components/ui/Loading'
 import { useToast } from '@/components/common/ToastProvider'
-import type { SalesOrder, SALES_ORDER_STATUS_MAP } from '@/types/sales-order'
-import { ERP_CONFIG } from '@/lib/constants/erp'
+import type { SalesOrder } from '@/types/sales-order'
 
 export default function SalesOrdersPage() {
   const router = useRouter()

@@ -7,7 +7,6 @@ import { useToast } from '@/components/common/ToastProvider'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Form'
 import { Alert } from '@/components/ui/Alert'
-import { ERP_CONFIG } from '@/lib/constants/erp'
 import Image from 'next/image'
 
 export default function LoginPageERP() {

@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as sqlite from '@/lib/db/sqlite'
 
-const ERP_BASE_URL = process.env.ERP_BASE_URL
-const ERP_API_KEY = process.env.ERP_API_KEY
-const ERP_API_SECRET = process.env.ERP_API_SECRET
-
 /**
  * GET /api/settings/report-recipients
  * Fetch recipients from local SQLite database
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Fetch recipients from SQLite (only employee_id and name stored locally)
     const recipients = sqlite.getAllRecipients()

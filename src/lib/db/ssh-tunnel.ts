@@ -1,6 +1,4 @@
 import { Client } from 'ssh2'
-import fs from 'fs'
-import path from 'path'
 import net from 'net'
 
 interface SSHTunnelConfig {

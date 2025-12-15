@@ -4,7 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/ui/Button'
-import { Badge, StatusBadge } from '@/components/ui/Badge'
+import { StatusBadge } from '@/components/ui/Badge'
 import { DataTable } from '@/components/ui/Table'
 import { useToast } from '@/components/common/ToastProvider'
 

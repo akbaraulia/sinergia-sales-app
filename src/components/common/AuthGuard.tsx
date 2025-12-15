@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { LoadingCard } from '@/components/ui/Loading'
-import SessionManager from '@/lib/utils/sessionManager'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -13,7 +12,7 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children, requiredPermissions = [] }: AuthGuardProps) {
   const router = useRouter()
-  const { isAuthenticated, user, hasPermission, logout } = useAuthStore()
+  const { isAuthenticated, user, hasPermission } = useAuthStore()
   const [isValidating, setIsValidating] = useState(true)
   const [authStatus, setAuthStatus] = useState<'checking' | 'valid' | 'invalid'>('checking')
   const [hasHydrated, setHasHydrated] = useState(false)

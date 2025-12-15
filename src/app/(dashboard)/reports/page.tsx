@@ -15,9 +15,9 @@ type ReportType = 'sales' | 'orders' | 'targets' | 'outlets'
 
 export default function ReportsPage() {
   const { showToast } = useToast()
-  const { user } = useAuthStore()
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('monthly')
-  const [selectedType, setSelectedType] = useState<ReportType>('sales')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [selectedType, _setSelectedType] = useState<ReportType>('sales')
 
   // Dummy data - akan diintegrasikan dengan API nanti
   const salesData = [

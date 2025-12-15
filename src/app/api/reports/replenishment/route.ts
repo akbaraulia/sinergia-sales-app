@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { ERP_CONFIG } from '@/lib/constants/erp'
-import type { ReplenishmentReportRow, ReplenishmentReportResponse, WarehouseData } from '@/types/replenishment'
+import type { ReplenishmentReportRow, ReplenishmentReportResponse } from '@/types/replenishment'
 
 export async function GET(request: Request) {
   try {

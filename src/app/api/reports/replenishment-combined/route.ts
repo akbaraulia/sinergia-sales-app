@@ -11,12 +11,7 @@ import {
 } from '@/lib/constants/branch-mapping'
 import type { 
   CombinedReportRow, 
-  CombinedReportResponse,
-  CombinedBranchData,
-  SivfuData,
-  ErpData,
-  calculateDiscrepancyLevel,
-  calculatePercentageDiff
+  CombinedReportResponse
 } from '@/types/combined-replenishment'
 
 // Import helpers

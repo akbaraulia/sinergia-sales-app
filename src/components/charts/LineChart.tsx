@@ -15,7 +15,6 @@ import {
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { cn } from '@/lib/utils/format'
-import { formatCurrency } from '@/lib/utils/format'
 
 ChartJS.register(
   CategoryScale,
