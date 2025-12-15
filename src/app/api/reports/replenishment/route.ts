@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { ERP_CONFIG } from '@/lib/constants/erp'
 import type { ReplenishmentReportRow, ReplenishmentReportResponse } from '@/types/replenishment'
 
+// Static API credentials for iframe/embedded access
+const ERP_API_KEY = process.env.ERP_API_KEY
+const ERP_API_SECRET = process.env.ERP_API_SECRET
+
 export async function GET(request: Request) {
   try {
     console.log('📊 [REPLENISHMENT] Fetching replenishment report data from server script...')
@@ -24,15 +28,15 @@ export async function GET(request: Request) {
     
     console.log('🌐 [REPLENISHMENT] Calling:', erpUrl)
     
-    // Get cookies from the incoming request (user's session)
-    const cookies = new Headers(request.headers).get('cookie') || ''
+    // Use static API Key authentication (for iframe/embedded access)
+    const authToken = Buffer.from(`${ERP_API_KEY}:${ERP_API_SECRET}`).toString('base64')
     
-    console.log('🔑 [REPLENISHMENT] Using Cookie-based authentication from user session')
+    console.log('🔑 [REPLENISHMENT] Using API Key authentication')
     
     const response = await fetch(erpUrl, {
       method: 'GET',
       headers: {
-        'Cookie': cookies,
+        'Authorization': `Basic ${authToken}`,
         ...ERP_CONFIG.HEADERS
       }
     })
