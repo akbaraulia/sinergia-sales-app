@@ -14,13 +14,12 @@ export async function GET(request: Request) {
     const branch = searchParams.get('branch')
     const warehouse = searchParams.get('warehouse')
     const itemCode = searchParams.get('item_code')
-    const company = searchParams.get('company')
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = (page - 1) * limit
 
-    console.log('🔍 [REPLENISHMENT] Filters:', { branch, warehouse, itemCode, company, search, page, limit })
+    console.log('🔍 [REPLENISHMENT] Filters:', { branch, warehouse, itemCode, search, page, limit })
 
     // Fetch from ERPNext server script endpoint
     const startTime = Date.now()
@@ -95,15 +94,27 @@ export async function GET(request: Request) {
 
     console.log(`📦 [REPLENISHMENT] Received ${pivotedData.length} items from ERP (already pivoted)`)
 
+    // Filter out HO branch and transit warehouse (warehouse "0" / "TIDAK ADA BRANCH") from each row
+    pivotedData = pivotedData.map(row => ({
+      ...row,
+      warehouses: row.warehouses.filter(wh => 
+        // Exclude HO branch
+        !wh.branch_code?.toUpperCase().includes('HO') && 
+        !wh.branch_name?.toUpperCase().includes('HO') &&
+        !wh.warehouse?.toUpperCase().includes('HO') &&
+        // Exclude transit warehouse (ID "0" or "TIDAK ADA BRANCH")
+        wh.warehouse !== '0' &&
+        !wh.branch_name?.toUpperCase().includes('TIDAK ADA BRANCH')
+      )
+    })).filter(row => row.warehouses.length > 0) // Remove items with no warehouses after filter
+
+    console.log(`📦 [REPLENISHMENT] After HO & transit filter: ${pivotedData.length} items`)
+
     // Apply filters to the ALREADY PIVOTED data
     let filteredData = pivotedData
     
     if (itemCode) {
       filteredData = filteredData.filter(row => row.item_code === itemCode)
-    }
-    
-    if (company) {
-      filteredData = filteredData.filter(row => row.company === company)
     }
     
     if (branch) {
@@ -123,7 +134,6 @@ export async function GET(request: Request) {
       filteredData = filteredData.filter(row =>
         row.item_code?.toLowerCase().includes(searchLower) ||
         row.item_name?.toLowerCase().includes(searchLower) ||
-        row.company?.toLowerCase().includes(searchLower) ||
         row.warehouses.some(wh => 
           wh.branch_name?.toLowerCase().includes(searchLower) ||
           wh.warehouse?.toLowerCase().includes(searchLower)
@@ -132,6 +142,15 @@ export async function GET(request: Request) {
     }
 
     console.log(`🔍 [REPLENISHMENT] After filters: ${filteredData.length} items`)
+
+    // Sort by item_code ASC first, then by item_name ASC
+    filteredData.sort((a, b) => {
+      const codeCompare = (a.item_code || '').localeCompare(b.item_code || '')
+      if (codeCompare !== 0) return codeCompare
+      return (a.item_name || '').localeCompare(b.item_name || '')
+    })
+
+    console.log(`📦 [REPLENISHMENT] After sorting by item_code, item_name ASC`)
 
     // Data is already pivoted by server script - just paginate
     const total = filteredData.length

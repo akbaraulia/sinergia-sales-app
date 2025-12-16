@@ -15,8 +15,7 @@ export default function ReplenishmentReportPage() {
   const [filters, setFilters] = useState({
     branch: '',
     warehouse: '',
-    itemCode: '',
-    company: ''
+    itemCode: ''
   })
   
   // Filter options from API
@@ -77,7 +76,6 @@ export default function ReplenishmentReportPage() {
       if (filters.branch) params.append('branch', filters.branch)
       if (filters.warehouse) params.append('warehouse', filters.warehouse)
       if (filters.itemCode) params.append('item_code', filters.itemCode)
-      if (filters.company) params.append('company', filters.company)
       params.append('page', page.toString())
       params.append('limit', limit.toString())
 
@@ -112,8 +110,7 @@ export default function ReplenishmentReportPage() {
     setFilters({
       branch: '',
       warehouse: '',
-      itemCode: '',
-      company: ''
+      itemCode: ''
     })
     setSearch('')
     setPage(1)
@@ -142,7 +139,6 @@ export default function ReplenishmentReportPage() {
       if (filters.branch) params.append('branch', filters.branch)
       if (filters.warehouse) params.append('warehouse', filters.warehouse)
       if (filters.itemCode) params.append('item_code', filters.itemCode)
-      if (filters.company) params.append('company', filters.company)
       // Fetch all data without pagination
       params.append('limit', '999999')
 
@@ -227,14 +223,26 @@ export default function ReplenishmentReportPage() {
         )
       })
 
+      // Build NASIONAL headers (same structure as warehouse columns)
+      const nasionalHeaders = [
+        'NASIONAL - Total Stock',
+        `NASIONAL - Sales ${monthLabels.m3}`,
+        `NASIONAL - Sales ${monthLabels.m2}`,
+        `NASIONAL - Sales ${monthLabels.m1}`,
+        `NASIONAL - Sales ${monthLabels.m0}`,
+        `NASIONAL - BBK ${monthLabels.m3}`,
+        `NASIONAL - BBK ${monthLabels.m2}`,
+        `NASIONAL - BBK ${monthLabels.m1}`,
+        `NASIONAL - BBK ${monthLabels.m0}`,
+        'NASIONAL - Avg Flow',
+        'NASIONAL - DOI'
+      ]
+
       const headers = [
-        'Company',
         'Item Code',
         'Item Name',
         ...warehouseHeaders,
-        'Total Qty',
-        'Total Stock Value',
-        'Overall DOI'
+        ...nasionalHeaders
       ]
 
       const csvRows = [
@@ -270,14 +278,34 @@ export default function ReplenishmentReportPage() {
             }
           })
 
+          // Calculate NASIONAL totals from all warehouses
+          const nasionalTotalStock = row.warehouses.reduce((sum, wh) => sum + (wh.current_qty || 0), 0)
+          const nasionalSalesM3 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m3 || 0), 0)
+          const nasionalSalesM2 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m2 || 0), 0)
+          const nasionalSalesM1 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m1 || 0), 0)
+          const nasionalSalesM0 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m0 || 0), 0)
+          const nasionalBBKM3 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m3 || 0), 0)
+          const nasionalBBKM2 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m2 || 0), 0)
+          const nasionalBBKM1 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m1 || 0), 0)
+          const nasionalBBKM0 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m0 || 0), 0)
+          const nasionalAvgFlow = row.warehouses.reduce((sum, wh) => sum + (wh.avg_flow_m1_to_m3 || 0), 0)
+          const nasionalDOI = nasionalAvgFlow > 0 ? (nasionalTotalStock / nasionalAvgFlow) * 30 : null
+
           return [
-            row.company,
             row.item_code,
             `"${row.item_name || ''}"`,
             ...warehouseData,
-            row.total_current_qty,
-            row.total_stock_value,
-            row.overall_doi || ''
+            nasionalTotalStock,
+            nasionalSalesM3,
+            nasionalSalesM2,
+            nasionalSalesM1,
+            nasionalSalesM0,
+            nasionalBBKM3,
+            nasionalBBKM2,
+            nasionalBBKM1,
+            nasionalBBKM0,
+            nasionalAvgFlow,
+            nasionalDOI || ''
           ].join(',')
         })
       ]
@@ -325,7 +353,7 @@ export default function ReplenishmentReportPage() {
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <input
               type="text"
               placeholder="🔍 Search all..."
@@ -380,13 +408,6 @@ export default function ReplenishmentReportPage() {
               placeholder="Item Code"
               value={filters.itemCode}
               onChange={(e) => handleFilterChange('itemCode', e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <input
-              type="text"
-              placeholder="Company"
-              value={filters.company}
-              onChange={(e) => handleFilterChange('company', e.target.value)}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -491,12 +512,9 @@ export default function ReplenishmentReportPage() {
                       <tr>
                         {/* Fixed columns - z-30 for corner cells (sticky both directions) */}
                         <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-0 bg-gray-100 dark:bg-gray-700 z-30">
-                          Company
-                        </th>
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-30">
                           Item Code
                         </th>
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[200px] bg-gray-100 dark:bg-gray-700 z-30 min-w-[200px]">
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-30 min-w-[200px]">
                           Item Name
                         </th>
                         
@@ -510,9 +528,9 @@ export default function ReplenishmentReportPage() {
                           )
                         })}
                         
-                        {/* Totals columns */}
-                        <th colSpan={3} className="px-3 py-2 text-center font-semibold text-red-700 dark:text-red-400 border-l-2 border-red-300">
-                          TOTALS
+                        {/* NASIONAL columns - same structure as warehouse (11 columns, no Lead Time & Replen) */}
+                        <th colSpan={11} className="px-3 py-2 text-center font-semibold text-red-700 dark:text-red-400 border-l-2 border-red-300 bg-red-50 dark:bg-red-900/20">
+                          🇮🇩 NASIONAL
                         </th>
                       </tr>
                       <tr>
@@ -535,23 +553,42 @@ export default function ReplenishmentReportPage() {
                           </Fragment>
                         ))}
                         
-                        {/* Total sub-headers */}
-                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 border-l-2 border-red-300">Total Qty</th>
-                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400">Total Value</th>
-                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400">Overall DOI</th>
+                        {/* NASIONAL sub-headers - same as warehouse but without Lead Time & Replen */}
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 border-l-2 border-red-300 bg-red-50 dark:bg-red-900/20">Stock</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">Sales {monthLabels.m3}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">Sales {monthLabels.m2}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">Sales {monthLabels.m1}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">Sales {monthLabels.m0}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">BBK {monthLabels.m3}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">BBK {monthLabels.m2}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">BBK {monthLabels.m1}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">BBK {monthLabels.m0}</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">Avg Flow</th>
+                        <th className="px-2 py-1 text-right text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20">DOI</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {data.map((row, idx) => (
+                      {data.map((row, idx) => {
+                        // Calculate NASIONAL totals for this row
+                        const nasionalTotalStock = row.warehouses.reduce((sum, wh) => sum + (wh.current_qty || 0), 0)
+                        const nasionalSalesM3 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m3 || 0), 0)
+                        const nasionalSalesM2 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m2 || 0), 0)
+                        const nasionalSalesM1 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m1 || 0), 0)
+                        const nasionalSalesM0 = row.warehouses.reduce((sum, wh) => sum + (wh.delivery_note_qty_m0 || 0), 0)
+                        const nasionalBBKM3 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m3 || 0), 0)
+                        const nasionalBBKM2 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m2 || 0), 0)
+                        const nasionalBBKM1 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m1 || 0), 0)
+                        const nasionalBBKM0 = row.warehouses.reduce((sum, wh) => sum + (wh.material_issue_qty_m0 || 0), 0)
+                        const nasionalAvgFlow = row.warehouses.reduce((sum, wh) => sum + (wh.avg_flow_m1_to_m3 || 0), 0)
+                        const nasionalDOI = nasionalAvgFlow > 0 ? (nasionalTotalStock / nasionalAvgFlow) * 30 : null
+
+                        return (
                         <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                           {/* Fixed columns */}
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800">
-                            {row.company}
-                          </td>
-                          <td className="px-3 py-2 font-mono text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[100px] bg-white dark:bg-gray-800">
+                          <td className="px-3 py-2 font-mono text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800">
                             {row.item_code}
                           </td>
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[200px] bg-white dark:bg-gray-800 min-w-[200px]">
+                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[100px] bg-white dark:bg-gray-800 min-w-[200px]">
                             {row.item_name}
                           </td>
                           
@@ -633,22 +670,47 @@ export default function ReplenishmentReportPage() {
                             }
                           })}
                           
-                          {/* Totals */}
-                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 border-l-2 border-red-300">
-                            {formatNumber(row.total_current_qty)}
+                          {/* NASIONAL columns - accumulated from all branches */}
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 border-l-2 border-red-300 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalTotalStock)}
                           </td>
-                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400">
-                            {formatCurrency(row.total_stock_value)}
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalSalesM3)}
                           </td>
-                          <td className={`px-2 py-2 text-right font-bold ${
-                            row.overall_doi !== null && row.overall_doi < 30 ? 'text-red-600 dark:text-red-400' :
-                            row.overall_doi !== null && row.overall_doi > 90 ? 'text-orange-600 dark:text-orange-400' :
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalSalesM2)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalSalesM1)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalSalesM0)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalBBKM3)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalBBKM2)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalBBKM1)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalBBKM0)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20">
+                            {formatNumber(nasionalAvgFlow)}
+                          </td>
+                          <td className={`px-2 py-2 text-right font-bold bg-red-50 dark:bg-red-900/20 ${
+                            nasionalDOI !== null && nasionalDOI < 30 ? 'text-red-600 dark:text-red-400' :
+                            nasionalDOI !== null && nasionalDOI > 90 ? 'text-orange-600 dark:text-orange-400' :
                             'text-green-600 dark:text-green-400'
                           }`}>
-                            {row.overall_doi !== null ? formatNumber(row.overall_doi) : '-'}
+                            {nasionalDOI !== null ? formatNumber(nasionalDOI) : '-'}
                           </td>
                         </tr>
-                      ))}
+                        )
+                      })}
                     </tbody>
                   </table>
                 )

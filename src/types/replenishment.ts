@@ -24,14 +24,14 @@ export interface WarehouseData {
 
 // Pivoted row - one row per item with all warehouses
 export interface ReplenishmentReportRow {
-  company: string
+  company?: string  // Optional - not displayed in UI
   item_code: string
   item_name: string
   
   // Array of warehouse data - each warehouse becomes a column group
   warehouses: WarehouseData[]
   
-  // Totals across all warehouses
+  // Totals across all warehouses (calculated from warehouses in UI)
   total_current_qty: number
   total_stock_value: number
   total_avg_flow: number
@@ -51,7 +51,6 @@ export interface ReplenishmentReportFilters {
   branch?: string
   warehouse?: string
   item_code?: string
-  company?: string
   search?: string
 }
 
