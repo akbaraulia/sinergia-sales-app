@@ -15,7 +15,8 @@ export const ERP_CONFIG = {
   // Headers untuk semua request ke ERPNext
   HEADERS: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Expect': '' // Disable 100-continue to fix 417 Expectation Failed
   }
 } as const
 
@@ -27,7 +28,8 @@ export const BRIDGING_CONFIG = {
   },
   HEADERS: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Expect': '' // Disable 100-continue to fix 417 Expectation Failed
   }
 } as const
 
