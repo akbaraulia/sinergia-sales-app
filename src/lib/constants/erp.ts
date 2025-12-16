@@ -1,7 +1,10 @@
 // ERPNext API Constants
+// Note: Use ERP_ENV (server-side) for runtime config, NEXT_PUBLIC_ERP_ENV is baked at build time
+const isProduction = process.env.ERP_ENV === 'PROD' || process.env.NEXT_PUBLIC_ERP_ENV === 'PROD'
+
 export const ERP_CONFIG = {
-  // Base URLs - use custom env selector
-  BASE_URL: process.env.NEXT_PUBLIC_ERP_ENV === 'PROD'
+  // Base URLs - use ERP_ENV for server-side runtime selection
+  BASE_URL: isProduction
     ? process.env.ERP_BASE_URL || 'https://sinergia.digitalasiasolusindo.com'
     : process.env.ERP_DEV_BASE_URL || 'https://sinergiadev.digitalasiasolusindo.com',
   
@@ -13,10 +16,10 @@ export const ERP_CONFIG = {
   },
 
   // Headers untuk semua request ke ERPNext
+  // Note: Don't use 'Expect' header - undici doesn't support it
   HEADERS: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    'Expect': '' // Disable 100-continue to fix 417 Expectation Failed
+    'Content-Type': 'application/json'
   }
 } as const
 
@@ -28,8 +31,7 @@ export const BRIDGING_CONFIG = {
   },
   HEADERS: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
-    'Expect': '' // Disable 100-continue to fix 417 Expectation Failed
+    'Content-Type': 'application/json'
   }
 } as const
 

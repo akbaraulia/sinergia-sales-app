@@ -12,6 +12,7 @@ services:
       - NEXT_PUBLIC_API_URL=https://localhost:9443/api
       - NEXT_PUBLIC_APP_URL=https://localhost:9443
       - NEXT_PUBLIC_ERP_ENV=PROD
+      - ERP_ENV=PROD
       - ERP_BASE_URL=https://sinergia.digitalasiasolusindo.com
       - ERP_DEV_BASE_URL=https://sinergiadev.digitalasiasolusindo.com
       - SESSION_TIMEOUT_MINUTES=60

@@ -9,6 +9,7 @@ services:
         - NEXT_PUBLIC_API_URL=http://localhost:9080/api
         - NEXT_PUBLIC_APP_URL=http://localhost:9080
         - NEXT_PUBLIC_ERP_ENV=PROD
+        - ERP_ENV=PROD
         - ERP_BASE_URL=https://sinergia.digitalasiasolusindo.com
         - ERP_DEV_BASE_URL=https://sinergiadev.digitalasiasolusindo.com
     container_name: sinergia-sales-web
@@ -19,6 +20,7 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:9080/api
       - NEXT_PUBLIC_APP_URL=http://localhost:9080
       - NEXT_PUBLIC_ERP_ENV=PROD
+      - ERP_ENV=PROD
       - ERP_BASE_URL=https://sinergia.digitalasiasolusindo.com
       - ERP_DEV_BASE_URL=https://sinergiadev.digitalasiasolusindo.com
       - SESSION_TIMEOUT_MINUTES=60
