@@ -37,6 +37,21 @@ export default function ReplenishmentReportPage() {
     m3: getMonthLabel(3)
   }
 
+  // Branch order priority from meeting
+  const BRANCH_ORDER: { [key: string]: number } = {
+    'JABAR-JKT': 1,
+    'YGY': 2,
+    'JATIM': 3,
+    'DP': 4,
+    'KPG': 5,
+    'MDN': 6,
+    'PKB': 7,
+    'PDG': 8,
+    'PLG': 9,
+    'BJM': 10,
+    'BKP': 11
+  }
+
   // Lead Time is now provided by API in custom_lead_time_in_month field
   // No more hardcoded buffer mapping needed
 
@@ -118,13 +133,18 @@ export default function ReplenishmentReportPage() {
   }
 
   const formatNumber = (num: number | null | undefined): string => {
-    if (num === null || num === undefined) return '-'
+    if (num === null || num === undefined || num === 0) return ''
     // Round to 2 decimals and remove trailing zeros
     const rounded = Math.round(num * 100) / 100
     return rounded.toLocaleString('id-ID', { 
       minimumFractionDigits: 0, 
       maximumFractionDigits: 2 
     })
+  }
+
+  // Helper to get branch sort priority
+  const getBranchPriority = (branchCode: string): number => {
+    return BRANCH_ORDER[branchCode] || 999 // Unknown branches go to the end
   }
 
   const formatCurrency = (num: number | null | undefined): string => {
@@ -178,7 +198,7 @@ export default function ReplenishmentReportPage() {
 
       // Collect ALL unique warehouses across all items (not just first item)
       const allWarehousesSet = new Set<string>()
-      const warehouseDetails = new Map<string, { branch: string, warehouse: string }>()
+      const warehouseDetails = new Map<string, { branch: string, warehouse: string, branch_code: string }>()
       
       allData.forEach(row => {
         row.warehouses.forEach(wh => {
@@ -187,18 +207,21 @@ export default function ReplenishmentReportPage() {
           if (!warehouseDetails.has(key)) {
             warehouseDetails.set(key, {
               branch: wh.branch_name,
-              warehouse: wh.warehouse
+              warehouse: wh.warehouse,
+              branch_code: wh.branch_code
             })
           }
         })
       })
 
-      // Sort warehouses for consistent ordering
+      // Sort warehouses by branch priority order from meeting
       const sortedWarehouseKeys = Array.from(allWarehousesSet).sort((a, b) => {
         const detailA = warehouseDetails.get(a)!
         const detailB = warehouseDetails.get(b)!
-        const branchCompare = detailA.branch.localeCompare(detailB.branch)
-        return branchCompare !== 0 ? branchCompare : detailA.warehouse.localeCompare(detailB.warehouse)
+        const priorityA = getBranchPriority(detailA.branch_code)
+        const priorityB = getBranchPriority(detailB.branch_code)
+        if (priorityA !== priorityB) return priorityA - priorityB
+        return detailA.warehouse.localeCompare(detailB.warehouse)
       })
 
       // Build dynamic headers based on ALL warehouses
@@ -240,6 +263,7 @@ export default function ReplenishmentReportPage() {
 
       const headers = [
         'Item Code',
+        'Old Item Code',
         'Item Name',
         ...warehouseHeaders,
         ...nasionalHeaders
@@ -293,6 +317,7 @@ export default function ReplenishmentReportPage() {
 
           return [
             row.item_code,
+            row.custom_old_item_code || '',
             `"${row.item_name || ''}"`,
             ...warehouseData,
             nasionalTotalStock,
@@ -327,6 +352,106 @@ export default function ReplenishmentReportPage() {
       }
     } catch (err) {
       console.error('Export failed:', err)
+      alert('Failed to export data')
+      if (exportButton) {
+        exportButton.textContent = originalButtonText
+        exportButton.disabled = false
+      }
+    }
+  }
+
+  // Export CSV in unpivoted/row format (one row per item-warehouse combination)
+  const exportToCSVUnpivoted = async () => {
+    if (loading) return
+
+    const originalButtonText = 'Export CSV (Rows)'
+    const exportButton = document.querySelector('[data-export-unpivoted-btn]') as HTMLButtonElement
+    if (exportButton) {
+      exportButton.textContent = '⏳ Fetching all data...'
+      exportButton.disabled = true
+    }
+
+    try {
+      const allData = await fetchAllDataForExport()
+      
+      if (allData.length === 0) {
+        alert('No data to export')
+        return
+      }
+
+      // Headers for unpivoted format
+      const headers = [
+        'Item Code',
+        'Old Item Code',
+        'Item Name',
+        'Branch Code',
+        'Branch Name',
+        'Warehouse',
+        'Lead Time',
+        'Stock',
+        `Sales ${monthLabels.m3}`,
+        `Sales ${monthLabels.m2}`,
+        `Sales ${monthLabels.m1}`,
+        `Sales ${monthLabels.m0}`,
+        `BBK ${monthLabels.m3}`,
+        `BBK ${monthLabels.m2}`,
+        `BBK ${monthLabels.m1}`,
+        `BBK ${monthLabels.m0}`,
+        'Avg Flow',
+        'DOI',
+        'Replenishment'
+      ]
+
+      const csvRows: string[] = [headers.join(',')]
+
+      // Flatten data - one row per item-warehouse combination
+      allData.forEach(row => {
+        row.warehouses.forEach(wh => {
+          const leadTime = wh.custom_lead_time_in_month || 0
+          const replenishment = Math.max(0, Math.ceil((wh.avg_flow_m1_to_m3 * leadTime) - wh.current_qty))
+          
+          csvRows.push([
+            row.item_code,
+            row.custom_old_item_code || '',
+            `"${row.item_name || ''}"`,
+            wh.branch_code || '',
+            `"${wh.branch_name || ''}"`,
+            wh.warehouse || '',
+            leadTime || '',
+            wh.current_qty || '',
+            wh.delivery_note_qty_m3 || '',
+            wh.delivery_note_qty_m2 || '',
+            wh.delivery_note_qty_m1 || '',
+            wh.delivery_note_qty_m0 || '',
+            wh.material_issue_qty_m3 || '',
+            wh.material_issue_qty_m2 || '',
+            wh.material_issue_qty_m1 || '',
+            wh.material_issue_qty_m0 || '',
+            wh.avg_flow_m1_to_m3 || '',
+            wh.doi_adjusted || '',
+            replenishment || ''
+          ].join(','))
+        })
+      })
+
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `replenishment-report-unpivoted-${new Date().toISOString().split('T')[0]}.csv`
+      link.click()
+
+      // Count total rows
+      const totalRows = csvRows.length - 1 // minus header
+      if (exportButton) {
+        exportButton.textContent = `✅ Exported ${totalRows} rows`
+        setTimeout(() => {
+          exportButton.textContent = originalButtonText
+          exportButton.disabled = false
+        }, 3000)
+      }
+    } catch (err) {
+      console.error('Export unpivoted failed:', err)
       alert('Failed to export data')
       if (exportButton) {
         exportButton.textContent = originalButtonText
@@ -430,7 +555,15 @@ export default function ReplenishmentReportPage() {
               data-export-btn
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              📥 Export CSV
+              📥 Export CSV (Pivot)
+            </button>
+            <button
+              onClick={exportToCSVUnpivoted}
+              disabled={loading}
+              data-export-unpivoted-btn
+              className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              📥 Export CSV (Rows)
             </button>
             <div className="flex-1" />
             <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4">
@@ -498,12 +631,14 @@ export default function ReplenishmentReportPage() {
                   })
                 })
 
-                // Sort warehouses for consistent ordering
+                // Sort warehouses by branch priority order from meeting
                 const sortedWarehouseKeys = Array.from(allWarehousesSet).sort((a, b) => {
                   const detailA = warehouseDetails.get(a)!
                   const detailB = warehouseDetails.get(b)!
-                  const branchCompare = detailA.branch.localeCompare(detailB.branch)
-                  return branchCompare !== 0 ? branchCompare : detailA.warehouse.localeCompare(detailB.warehouse)
+                  const priorityA = getBranchPriority(detailA.branch_code)
+                  const priorityB = getBranchPriority(detailB.branch_code)
+                  if (priorityA !== priorityB) return priorityA - priorityB
+                  return detailA.warehouse.localeCompare(detailB.warehouse)
                 })
 
                 return (
@@ -514,7 +649,10 @@ export default function ReplenishmentReportPage() {
                         <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-0 bg-gray-100 dark:bg-gray-700 z-30">
                           Item Code
                         </th>
-                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-30 min-w-[200px]">
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[100px] bg-gray-100 dark:bg-gray-700 z-30">
+                          Old Code
+                        </th>
+                        <th rowSpan={2} className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 border-r dark:border-gray-600 sticky left-[180px] bg-gray-100 dark:bg-gray-700 z-30 min-w-[200px]">
                           Item Name
                         </th>
                         
@@ -588,7 +726,10 @@ export default function ReplenishmentReportPage() {
                           <td className="px-3 py-2 font-mono text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800">
                             {row.item_code}
                           </td>
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[100px] bg-white dark:bg-gray-800 min-w-[200px]">
+                          <td className="px-3 py-2 font-mono text-gray-500 dark:text-gray-400 border-r dark:border-gray-700 sticky left-[100px] bg-white dark:bg-gray-800 text-xs">
+                            {row.custom_old_item_code || ''}
+                          </td>
+                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100 border-r dark:border-gray-700 sticky left-[180px] bg-white dark:bg-gray-800 min-w-[200px]">
                             {row.item_name}
                           </td>
                           
@@ -636,10 +777,10 @@ export default function ReplenishmentReportPage() {
                                   </td>
                                   <td className={`px-2 py-2 text-right font-bold border-r dark:border-gray-700 ${
                                     wh.doi_adjusted !== null && wh.doi_adjusted < 30 ? 'text-red-600 dark:text-red-400' :
-                                    wh.doi_adjusted !== null && wh.doi_adjusted > 90 ? 'text-orange-600 dark:text-orange-400' :
+                                    wh.doi_adjusted !== null && wh.doi_adjusted > 90 ? 'text-blue-600 dark:text-blue-400' :
                                     'text-green-600 dark:text-green-400'
                                   }`}>
-                                    {wh.doi_adjusted !== null ? formatNumber(wh.doi_adjusted) : '-'}
+                                    {wh.doi_adjusted !== null ? formatNumber(wh.doi_adjusted) : ''}
                                   </td>
                                   <td className={`px-2 py-2 text-right font-bold border-r-2 border-asparagus-300 dark:border-asparagus-600 ${
                                     replenishment > 0 ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : 'text-green-600 dark:text-green-400'
@@ -649,22 +790,22 @@ export default function ReplenishmentReportPage() {
                                 </Fragment>
                               )
                             } else {
-                              // Warehouse not present for this item - show dashes (13 columns now)
+                              // Warehouse not present for this item - show empty cells (13 columns)
                               return (
                                 <Fragment key={whKey}>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700">-</td>
-                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r-2 border-asparagus-300 dark:border-asparagus-600">-</td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r dark:border-gray-700"></td>
+                                  <td className="px-2 py-2 text-right text-gray-400 dark:text-gray-600 border-r-2 border-asparagus-300 dark:border-asparagus-600"></td>
                                 </Fragment>
                               )
                             }
@@ -703,10 +844,10 @@ export default function ReplenishmentReportPage() {
                           </td>
                           <td className={`px-2 py-2 text-right font-bold bg-red-50 dark:bg-red-900/20 ${
                             nasionalDOI !== null && nasionalDOI < 30 ? 'text-red-600 dark:text-red-400' :
-                            nasionalDOI !== null && nasionalDOI > 90 ? 'text-orange-600 dark:text-orange-400' :
+                            nasionalDOI !== null && nasionalDOI > 90 ? 'text-blue-600 dark:text-blue-400' :
                             'text-green-600 dark:text-green-400'
                           }`}>
-                            {nasionalDOI !== null ? formatNumber(nasionalDOI) : '-'}
+                            {nasionalDOI !== null ? formatNumber(nasionalDOI) : ''}
                           </td>
                         </tr>
                         )

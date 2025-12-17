@@ -26,6 +26,7 @@ export interface WarehouseData {
 export interface ReplenishmentReportRow {
   company?: string  // Optional - not displayed in UI
   item_code: string
+  custom_old_item_code?: string  // Old item code from ERP
   item_name: string
   
   // Array of warehouse data - each warehouse becomes a column group

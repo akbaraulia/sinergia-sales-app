@@ -78,6 +78,19 @@ interface CartItem {
   subtotal: number
 }
 
+// Success data interface for the success modal
+interface SuccessData {
+  documentName: string
+  status: string
+  totalHarga: number
+  nilai: number
+  customerCode: string
+  branch: string
+  itemsCount: number
+  freeItemsCount: number
+  bridgingSuccess: boolean
+}
+
 export default function VoucherFormPage() {
   const router = useRouter()
   const params = useParams()
@@ -103,6 +116,11 @@ export default function VoucherFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  
+  // Success modal states
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successData, setSuccessData] = useState<SuccessData | null>(null)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   // Search states for dropdowns
   const [salesPersonSearch, setSalesPersonSearch] = useState('')
@@ -963,18 +981,24 @@ const canAddItem = (item: SellableItem): boolean => {
           }
         }
         
-        showToast.success(
-          'Voucher approved and processed successfully!', 
-          `Document ${data.data?.name} approved and queued for mobile apps${
-            data.bridging?.success ? ' ✅' : ' (bridging failed ⚠️)'
-          }`
-        )
+        // Set success data for modal display
+        setSuccessData({
+          documentName: data.data?.name || 'Unknown',
+          status: data.data?.status || 'Unknown',
+          totalHarga: data.data?.total_harga || cartTotal,
+          nilai: data.data?.nilai || promo?.nilai || 0,
+          customerCode: data.data?.customer_code || selectedUser,
+          branch: data.data?.branch || selectedBranch,
+          itemsCount: data.data?.items_count || cart.length,
+          freeItemsCount: data.data?.free_items_count || 0,
+          bridgingSuccess: data.bridging?.success || false
+        })
         
         // Clear cart after successful submission
         setCart([])
         
-        // Redirect to success page or dashboard
-        router.push('/dashboard?voucher_success=true')
+        // Show success modal instead of redirect
+        setShowSuccessModal(true)
         
       } else {
         console.error('❌ [VOUCHER_SUBMIT] Submission failed:', data.error)
@@ -2011,6 +2035,172 @@ const canAddItem = (item: SellableItem): boolean => {
                       <span>Yes, Submit Voucher</span>
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - Shows document name after successful submission */}
+      {showSuccessModal && successData && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop - No click to close for success modal */}
+          <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+          
+          {/* Modal */}
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-lg shadow-xl transform transition-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Success Header */}
+              <div className="flex flex-col items-center justify-center pt-8 pb-4">
+                <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                  <svg className="h-10 w-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Voucher Berhasil Dibuat!
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">
+                  Form Bebas Pilih telah berhasil diproses
+                </p>
+              </div>
+              
+              {/* Document Number - Main Focus */}
+              <div className="px-6 py-4">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-200 dark:border-blue-700 rounded-lg p-6 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Nomor Dokumen
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono tracking-wider mb-4">
+                    {successData.documentName}
+                  </p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(successData.documentName)
+                      setCopySuccess(true)
+                      setTimeout(() => setCopySuccess(false), 2000)
+                    }}
+                    className={`inline-flex items-center px-4 py-2 rounded-lg transition-all ${
+                      copySuccess 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-700'
+                    }`}
+                  >
+                    {copySuccess ? (
+                      <>
+                        <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Tersalin!
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Salin Nomor
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Summary Details */}
+              <div className="px-6 pb-4">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Status</span>
+                    <Badge variant="success">{successData.status}</Badge>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Customer</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{successData.customerCode}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Branch</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{successData.branch}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Jumlah Item</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {successData.itemsCount} item{successData.freeItemsCount > 0 ? ` + ${successData.freeItemsCount} gratis` : ''}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">Total Nilai</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{formatCurrency(successData.totalHarga)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Nilai Voucher</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(successData.nilai)}</span>
+                  </div>
+                  {/* Bridging Status */}
+                  <div className="flex justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">Sync Mobile Apps</span>
+                    {successData.bridgingSuccess ? (
+                      <span className="inline-flex items-center text-green-600 dark:text-green-400">
+                        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Berhasil
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-yellow-600 dark:text-yellow-400">
+                        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer Actions */}
+              <div className="flex flex-col gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                {/* Primary Actions Row */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      setSuccessData(null)
+                      // Reset form for new voucher
+                      setSelectedSalesPerson('')
+                      setSelectedUser('')
+                      setSelectedVoucherType('')
+                    }}
+                    className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  >
+                    Buat Voucher Lagi
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSuccessModal(false)
+                      setSuccessData(null)
+                      router.push('/dashboard')
+                    }}
+                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Kembali ke Dashboard
+                  </button>
+                </div>
+                {/* View History Link */}
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false)
+                    setSuccessData(null)
+                    router.push('/promo/history')
+                  }}
+                  className="w-full px-6 py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Lihat Riwayat Form Hari Ini
                 </button>
               </div>
             </div>
