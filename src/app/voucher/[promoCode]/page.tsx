@@ -597,17 +597,16 @@ const canAddItem = (item: SellableItem): boolean => {
   const filteredItems = useMemo(() => {
     let filtered = allItems
 
-    // Brand filter - if promo has specific brand, match brand OR custom_subbrand
+    // Brand filter - if promo has specific brand, EXACT MATCH brand OR custom_subbrand
+    // IMPORTANT: Must be exact match to prevent "Classico" matching "Classico Vegan"
     if (promo?.brand && promo.brand.trim() !== '') {
-      const promoBrand = promo.brand.toLowerCase()
+      const promoBrand = promo.brand.toLowerCase().trim()
       filtered = filtered.filter(item => {
-        const itemBrand = item.brand?.toLowerCase() || ''
-        const itemSubbrand = item.custom_subbrand?.toLowerCase() || ''
+        const itemBrand = (item.brand?.toLowerCase() || '').trim()
+        const itemSubbrand = (item.custom_subbrand?.toLowerCase() || '').trim()
         
-        return itemBrand.includes(promoBrand) ||
-               itemBrand === promoBrand ||
-               itemSubbrand.includes(promoBrand) ||
-               itemSubbrand === promoBrand
+        // EXACT MATCH ONLY - no partial matching!
+        return itemBrand === promoBrand || itemSubbrand === promoBrand
       })
     }
 
